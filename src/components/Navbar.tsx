@@ -3,11 +3,10 @@
 import React, { useState } from 'react';
 import { 
   Monitor, Tablet, Smartphone, Code, Eye, Columns, Share2, 
-  Download, Settings, Sparkles, Check, ChevronDown, Zap
+  Download, Settings, User, LogOut, Zap, History, FolderKanban
 } from 'lucide-react';
 import { AuraLogo } from './AuraLogo';
-import { SubscriptionTier, UserSubscription } from '@/types';
-import { SUBSCRIPTION_TIERS } from '@/config/tiers';
+import { useAuth } from '@/lib/client/auth-context';
 
 interface NavbarProps {
   projectTitle: string;
@@ -16,11 +15,12 @@ interface NavbarProps {
   onChangeViewport: (vp: 'desktop' | 'tablet' | 'mobile') => void;
   viewMode: 'split' | 'preview' | 'code';
   onChangeViewMode: (vm: 'split' | 'preview' | 'code') => void;
-  subscription: UserSubscription;
   onOpenPricing: () => void;
   onOpenSettings: () => void;
   onOpenShare: () => void;
   onOpenExport: () => void;
+  onOpenAuth: () => void;
+  onOpenProjects: () => void;
   version: number;
 }
 
@@ -31,19 +31,24 @@ export function Navbar({
   onChangeViewport,
   viewMode,
   onChangeViewMode,
-  subscription,
   onOpenPricing,
   onOpenSettings,
   onOpenShare,
   onOpenExport,
+  onOpenAuth,
+  onOpenProjects,
   version,
 }: NavbarProps) {
+  const { user, account, signOut } = useAuth();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(projectTitle);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const currentTier = SUBSCRIPTION_TIERS[subscription.tier] || SUBSCRIPTION_TIERS.starter;
-  const requestsRemaining = Math.max(0, subscription.dailyRequestsLimit - subscription.dailyRequestsUsed);
-  const isNearLimit = requestsRemaining <= 3;
+  const planName = account?.planName || 'Free';
+  const requestsRemaining = account
+    ? Math.max(0, account.today.requestLimit - account.today.requests)
+    : 5;
+  const isNearLimit = requestsRemaining <= 2;
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -56,13 +61,22 @@ export function Navbar({
 
   return (
     <header className="h-14 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md px-4 flex items-center justify-between z-30 select-none">
-      {/* Left: Brand + Project Title */}
-      <div className="flex items-center gap-4">
+      {/* Left: Brand + Project Drawer + Project Title */}
+      <div className="flex items-center gap-3.5">
         <AuraLogo size="sm" showSubtitle={false} />
 
         <div className="h-4 w-[1px] bg-zinc-800" />
 
-        {/* Project Name editable */}
+        {/* Projects Drawer Trigger */}
+        <button
+          onClick={onOpenProjects}
+          className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+          title="Open Projects & History"
+        >
+          <FolderKanban className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Project Title editable */}
         <div className="flex items-center gap-2">
           {isEditingTitle ? (
             <input
@@ -88,11 +102,6 @@ export function Navbar({
           {/* Version badge */}
           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
             v{version}.0
-          </span>
-
-          <span className="text-[10px] text-emerald-400/90 flex items-center gap-1 hidden md:flex">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Live
           </span>
         </div>
       </div>
@@ -162,7 +171,7 @@ export function Navbar({
         </div>
       </div>
 
-      {/* Right: Subscription Tier Badge, Actions, Settings */}
+      {/* Right: Plan pill, share, export, auth */}
       <div className="flex items-center gap-2.5">
         {/* Tier & Daily Limits Quota Badge */}
         <button
@@ -175,12 +184,17 @@ export function Navbar({
           title="Click to view pricing & daily fair usage quota"
         >
           <Zap className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform" />
-          <span className="font-semibold text-white">{currentTier.name}</span>
-          <span className="text-[10px] text-zinc-400 font-mono">
-            {requestsRemaining}/{subscription.dailyRequestsLimit} left today
+          <span className="font-semibold text-white">{planName}</span>
+          <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
+            {requestsRemaining} left today
           </span>
+          {account && (
+            <span className="text-[10px] text-zinc-500 font-mono hidden md:inline">
+              ({account.credits.remaining} cr)
+            </span>
+          )}
           <span className="text-[10px] font-bold text-amber-300 ml-1 underline decoration-amber-400/50">
-            Upgrade
+            {account?.plan === 'pro' ? 'Limits' : 'Upgrade'}
           </span>
         </button>
 
@@ -204,14 +218,65 @@ export function Navbar({
           <span className="hidden sm:inline">Export</span>
         </button>
 
-        {/* Settings Button */}
-        <button
-          onClick={onOpenSettings}
-          className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all"
-          title="Settings & OpenRouter BYOK Key"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+        {/* User Account / Sign In */}
+        {user ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-amber-400 hover:border-zinc-600 transition-colors overflow-hidden"
+              title={user.email || 'User Account'}
+            >
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span>{(user.email || user.displayName || 'U').charAt(0).toUpperCase()}</span>
+              )}
+            </button>
+
+            {showUserMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl p-2 z-50 text-xs space-y-1">
+                  <div className="px-3 py-2 border-b border-zinc-800">
+                    <p className="font-semibold text-white truncate">{user.displayName || 'Member'}</p>
+                    <p className="text-[11px] text-zinc-400 truncate">{user.email}</p>
+                    <p className="text-[10px] text-amber-400 font-mono mt-1 font-semibold">{planName} Plan</p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onOpenSettings();
+                    }}
+                    className="w-full px-3 py-2 text-left rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 flex items-center gap-2"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Settings</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      signOut();
+                    }}
+                    className="w-full px-3 py-2 text-left rounded-lg text-red-400 hover:bg-zinc-800 flex items-center gap-2"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={onOpenAuth}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-900 border border-zinc-700 text-zinc-200 hover:text-white hover:border-zinc-500 transition-all flex items-center gap-1.5"
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );

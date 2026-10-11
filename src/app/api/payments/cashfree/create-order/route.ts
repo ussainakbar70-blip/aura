@@ -1,54 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createCashfreeOrder } from '@/lib/cashfree';
-import { SUBSCRIPTION_TIERS } from '@/config/tiers';
-import { SubscriptionTier } from '@/types';
+import { requireUser } from '@/lib/server/auth';
+import { createCashfreeOrder } from '@/lib/server/cashfree';
+import { errorResponse, readJson, ApiError } from '@/lib/server/errors';
+import { isPlanId, PlanId } from '@/config/plans';
 
-export async function POST(req: NextRequest) {
+
+interface CreateOrderBody {
+  planId: PlanId;
+  phone?: string;
+}
+
+export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { tierId, customerName, customerEmail, customerPhone } = body;
+    const user = await requireUser(req);
+    const body = await readJson<CreateOrderBody>(req);
 
-    const tier = SUBSCRIPTION_TIERS[tierId as SubscriptionTier];
-    if (!tier) {
-      return NextResponse.json(
-        { error: `Invalid subscription tier: ${tierId}` },
-        { status: 400 }
-      );
+    if (!body.planId || !isPlanId(body.planId) || body.planId === 'free') {
+      throw new ApiError(400, 'INVALID_PLAN', 'Please select a valid paid plan (Starter, Creator, or Pro).');
     }
 
-    const orderId = `aura_${tierId}_${Date.now()}`;
-    const orderAmount = tier.priceINR; // Cashfree PG standard amount in INR
-
-    const host = req.headers.get('host') || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const returnUrl = `${protocol}://${host}?payment_status=success&order_id={order_id}&tier=${tierId}`;
-
-    const orderData = await createCashfreeOrder({
-      orderId,
-      orderAmount,
-      orderCurrency: 'INR',
-      customerName: customerName || 'Aura Developer',
-      customerEmail: customerEmail || 'dev@aura.build',
-      customerPhone: customerPhone || '9876543210',
-      returnUrl,
-      tierId,
-    });
-
-    return NextResponse.json({
-      success: true,
-      orderId: orderData.order_id,
-      paymentSessionId: orderData.payment_session_id,
-      orderAmount,
-      orderCurrency: 'INR',
-      tier: tier.name,
-      tierId: tier.id,
-      dailyLimit: tier.dailyRequestLimit,
-    });
-  } catch (error: any) {
-    console.error('Order creation handler error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to initialize Cashfree payment' },
-      { status: 500 }
+    const orderData = await createCashfreeOrder(
+      user.uid,
+      user.email,
+      user.name,
+      body.phone || null,
+      body.planId
     );
+
+    return Response.json({
+      success: true,
+      orderId: orderData.orderId,
+      paymentSessionId: orderData.paymentSessionId,
+      amountINR: orderData.amountINR,
+    });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

@@ -1,128 +1,204 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { synthesizeAppFromPrompt } from '@/lib/templates';
-import { FRONTIER_MODELS } from '@/config/models';
+import { requireUser } from '@/lib/server/auth';
+import { getAccount, reserveGeneration, settleGeneration, toAccountView } from '@/lib/server/billing';
+import { ApiError, errorResponse, readJson } from '@/lib/server/errors';
+import { getModel, MODELS } from '@/config/models';
+import { createProject, getProject, recordIteration } from '@/lib/server/projects';
+import { streamOpenRouter } from '@/lib/server/openrouter';
+import { usdToCredits } from '@/config/plans';
+import type { ChatMessage, GenerateEvent } from '@/types';
 
-export async function POST(req: NextRequest) {
+
+interface GenerateBody {
+  prompt: string;
+  modelId?: string;
+  projectId?: string;
+}
+
+export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { prompt, model: requestedModel } = body;
+    const user = await requireUser(req);
+    const body = await readJson<GenerateBody>(req);
 
-    if (!prompt || typeof prompt !== 'string') {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    if (!body.prompt || typeof body.prompt !== 'string' || !body.prompt.trim()) {
+      throw new ApiError(400, 'EMPTY_PROMPT', 'Prompt cannot be empty.');
     }
 
-    const modelId = requestedModel || 'anthropic/claude-3.5-sonnet';
-    const modelConfig = FRONTIER_MODELS.find((m) => m.id === modelId) || FRONTIER_MODELS[0];
+    const promptText = body.prompt.trim();
+    const model = getModel(body.modelId) ?? MODELS[0];
 
-    // Check OpenRouter API key from headers (BYOK) or server environment
-    const userApiKey = req.headers.get('x-openrouter-key');
-    const apiKey = userApiKey || process.env.OPENROUTER_API_KEY;
-
-    // If an API key is available, call OpenRouter directly!
-    if (apiKey && apiKey.trim().length > 10) {
+    // Check existing project if iterating
+    let existingHtml: string | null = null;
+    let projectTitle = 'Untitled App';
+    if (body.projectId) {
       try {
-        const systemPrompt = `You are Aura, an elite autonomous frontend AI coding engine that acts like Lovable.
-When a user gives an app prompt, you architect and build a COMPLETE, SINGLE-PAGE, FULLY INTERACTIVE web application.
-Guidelines:
-1. Output MUST include valid, standalone HTML with Tailwind CSS (<script src="https://cdn.tailwindcss.com"></script>) and Lucide Icons (<script src="https://unpkg.com/lucide@latest"></script>).
-2. The UI must follow a sleek, dark-mode luxury aesthetic (#09090b background, fine borders, glowing accents, glass panels).
-3. Include functional JavaScript: buttons, search filter, tab switching, mock data generator, modal interactions.
-4. Output your answer in the following format:
----THOUGHT_STEPS---
-- Step 1 description
-- Step 2 description
-- Step 3 description
----TITLE---
-Clean App Title
----HTML---
-<!DOCTYPE html>
-<html>...</html>
----REACT---
-import React from 'react'; ...
-`;
-
-        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': 'https://aura.build',
-            'X-Title': 'Aura Vibe-Coding Platform',
-          },
-          body: JSON.stringify({
-            model: modelId,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Build this application: ${prompt}` },
-            ],
-            temperature: 0.7,
-            max_tokens: 4000,
-          }),
-        });
-
-        if (openRouterRes.ok) {
-          const completion = await openRouterRes.json();
-          const rawContent = completion.choices?.[0]?.message?.content || '';
-
-          // Parse the response
-          const thoughtMatch = rawContent.match(/---THOUGHT_STEPS---([\s\S]*?)---TITLE---/);
-          const titleMatch = rawContent.match(/---TITLE---([\s\S]*?)---HTML---/);
-          const htmlMatch = rawContent.match(/---HTML---([\s\S]*?)(---REACT---|$)/);
-          const reactMatch = rawContent.match(/---REACT---([\s\S]*?)$/);
-
-          const thoughtSteps = thoughtMatch
-            ? thoughtMatch[1].trim().split('\n').filter(Boolean).map((s: string) => s.replace(/^[-*]\s*/, ''))
-            : [
-                'Architected layout and components via OpenRouter',
-                'Synthesized reactive state and event handlers',
-                'Applied luxury dark mode tokens',
-              ];
-
-          const title = titleMatch ? titleMatch[1].trim() : 'Generated Application';
-          const htmlCode = htmlMatch ? htmlMatch[1].trim() : rawContent;
-          const reactCode = reactMatch ? reactMatch[1].trim() : '// React code';
-
-          return NextResponse.json({
-            success: true,
-            source: 'openrouter',
-            model: modelConfig.name,
-            modelId,
-            title,
-            thoughtSteps,
-            files: [
-              { name: 'App.tsx', language: 'typescript', content: reactCode },
-              { name: 'index.html', language: 'html', content: htmlCode },
-              { name: 'styles.css', language: 'css', content: '/* Aura Luxury Tailwind Styles */' },
-            ],
-            htmlCode,
-          });
-        } else {
-          console.warn('OpenRouter API returned error, falling back to local synthesis engine');
+        const project = await getProject(user.uid, body.projectId);
+        existingHtml = project.html;
+        projectTitle = project.title;
+      } catch (err) {
+        if (!(err instanceof ApiError && err.code === 'PROJECT_NOT_FOUND')) {
+          throw err;
         }
-      } catch (orErr) {
-        console.warn('Error calling OpenRouter API:', orErr);
       }
     }
 
-    // Default high-performance synthesis engine (works instantly with zero API keys required!)
-    const synthesized = synthesizeAppFromPrompt(prompt, modelConfig.name);
-
-    return NextResponse.json({
-      success: true,
-      source: 'aura-synthesis-engine',
-      model: modelConfig.name,
-      modelId,
-      title: synthesized.title,
-      thoughtSteps: synthesized.thoughtSteps,
-      files: synthesized.files,
-      htmlCode: synthesized.htmlCode,
-      note: apiKey ? undefined : 'Running on Aura Smart Synthesis. Connect OpenRouter API Key in Settings for live cloud inference.',
-    });
-  } catch (error: any) {
-    console.error('Generation route error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Generation failed' },
-      { status: 500 }
+    // Estimate input tokens for reservation
+    const inputTokenEstimate = Math.ceil(
+      (promptText.length + (existingHtml?.length ?? 0) + 1200) / 4
     );
+
+    // Atomically reserve generation
+    const reservation = await reserveGeneration(user, model, inputTokenEstimate);
+
+    // Create ReadableStream for SSE response
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const sendEvent = (event: GenerateEvent) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        };
+
+        const now = Date.now();
+        const userMsg: ChatMessage = {
+          id: `msg_${now}_user`,
+          role: 'user',
+          content: promptText,
+          createdAt: now,
+        };
+
+        sendEvent({
+          type: 'start',
+          model: model.label,
+          maxTokens: reservation.maxTokens,
+        });
+
+        try {
+          const streamResult = await streamOpenRouter(
+            model,
+            promptText,
+            existingHtml,
+            reservation.maxTokens,
+            {
+              onReasoning: (text) => sendEvent({ type: 'reasoning', text }),
+              onDelta: (text) => sendEvent({ type: 'delta', text }),
+            }
+          );
+
+          const actualCredits = usdToCredits(streamResult.costUsd);
+          const asstNow = Date.now();
+          const asstMsg: ChatMessage = {
+            id: `msg_${asstNow}_asst`,
+            role: 'assistant',
+            content: streamResult.reasoningText || `Generated ${streamResult.title}`,
+            createdAt: asstNow,
+            model: model.label,
+            credits: Math.round(actualCredits * 100) / 100,
+          };
+
+          // Save to Firestore
+          let finalProjectId = body.projectId;
+          let finalVersion = 1;
+          let finalTitle = streamResult.title;
+
+          if (body.projectId) {
+            const iterResult = await recordIteration(user.uid, body.projectId, {
+              html: streamResult.html,
+              model: model.id,
+              prompt: promptText,
+              userMessage: userMsg,
+              assistantMessage: asstMsg,
+              newTitle: streamResult.title,
+            });
+            finalVersion = iterResult.version;
+            finalTitle = iterResult.title;
+          } else {
+            const newProj = await createProject(user.uid, {
+              title: streamResult.title,
+              html: streamResult.html,
+              model: model.id,
+              prompt: promptText,
+              userMessage: userMsg,
+              assistantMessage: asstMsg,
+            });
+            finalProjectId = newProj.id;
+            finalVersion = 1;
+          }
+
+          // Settle the reservation with actual cost
+          await settleGeneration({
+            reservation,
+            actualCredits,
+            refundRequest: false,
+            ledger: {
+              projectId: finalProjectId || 'unknown',
+              model: model.id,
+              promptTokens: streamResult.promptTokens,
+              completionTokens: streamResult.completionTokens,
+              costUsd: streamResult.costUsd,
+              estimated: streamResult.estimated,
+              outcome: 'saved',
+            },
+          });
+
+          // Fetch updated account state
+          const updatedAccount = await getAccount(user);
+
+          asstMsg.version = finalVersion;
+
+          sendEvent({
+            type: 'done',
+            version: finalVersion,
+            title: finalTitle,
+            message: asstMsg,
+            userMessage: userMsg,
+            html: streamResult.html,
+            account: updatedAccount,
+          });
+
+          controller.close();
+        } catch (genErr: any) {
+          console.error('[aura] Generation stream error:', genErr);
+
+          // Refund the hold and request limit slot
+          try {
+            await settleGeneration({
+              reservation,
+              actualCredits: 0,
+              refundRequest: true,
+              ledger: {
+                projectId: body.projectId || 'failed',
+                model: model.id,
+                promptTokens: inputTokenEstimate,
+                completionTokens: 0,
+                costUsd: 0,
+                estimated: true,
+                outcome: 'failed',
+              },
+            });
+          } catch (refundErr) {
+            console.error('[aura] Failed to refund reservation:', refundErr);
+          }
+
+          const fallbackAccount = await getAccount(user).catch(() => undefined);
+          sendEvent({
+            type: 'error',
+            code: genErr?.code || 'GENERATION_FAILED',
+            message: genErr?.message || 'Failed to complete generation. Limits have been refunded.',
+            account: fallbackAccount,
+          });
+
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+      },
+    });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

@@ -1,51 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyCashfreeOrder } from '@/lib/cashfree';
-import { SUBSCRIPTION_TIERS } from '@/config/tiers';
-import { SubscriptionTier } from '@/types';
+import { requireUser } from '@/lib/server/auth';
+import { verifyAndActivateOrder } from '@/lib/server/cashfree';
+import { errorResponse, readJson, ApiError } from '@/lib/server/errors';
 
-export async function POST(req: NextRequest) {
+
+interface VerifyOrderBody {
+  orderId: string;
+}
+
+export async function POST(req: Request) {
   try {
-    const { orderId, tierId } = await req.json();
+    const user = await requireUser(req);
+    const body = await readJson<VerifyOrderBody>(req);
 
-    if (!orderId) {
-      return NextResponse.json({ error: 'Missing orderId parameter' }, { status: 400 });
+    if (!body.orderId || typeof body.orderId !== 'string') {
+      throw new ApiError(400, 'MISSING_ORDER_ID', 'Order ID is required.');
     }
 
-    const orderStatusData = await verifyCashfreeOrder(orderId);
+    const result = await verifyAndActivateOrder(body.orderId, user.uid);
 
-    // If order status is PAID
-    const isPaid = orderStatusData.order_status === 'PAID';
-
-    // Determine tier from tierId or extract from orderId (format: aura_tierId_timestamp)
-    let resolvedTier: SubscriptionTier = 'starter';
-    if (tierId && SUBSCRIPTION_TIERS[tierId as SubscriptionTier]) {
-      resolvedTier = tierId as SubscriptionTier;
-    } else {
-      const parts = orderId.split('_');
-      if (parts[1] && SUBSCRIPTION_TIERS[parts[1] as SubscriptionTier]) {
-        resolvedTier = parts[1] as SubscriptionTier;
-      }
-    }
-
-    const tierConfig = SUBSCRIPTION_TIERS[resolvedTier];
-
-    return NextResponse.json({
+    return Response.json({
       success: true,
-      paid: isPaid,
-      orderStatus: orderStatusData.order_status,
-      orderId: orderStatusData.order_id,
-      amount: orderStatusData.order_amount,
-      tier: resolvedTier,
-      tierName: tierConfig.name,
-      dailyLimit: tierConfig.dailyRequestLimit,
-      profitMarginUSD: tierConfig.estimatedProfitMarginUSD,
-      activatedAt: new Date().toISOString(),
+      paid: result.paid,
+      status: result.status,
+      account: result.account,
     });
-  } catch (error: any) {
-    console.error('Payment verification error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Payment verification failed' },
-      { status: 500 }
-    );
+  } catch (err) {
+    return errorResponse(err);
   }
 }

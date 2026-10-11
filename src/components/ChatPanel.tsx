@@ -2,51 +2,53 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Sparkles, Send, Bot, User, CheckCircle2, ChevronDown, Lock, 
-  ArrowRight, RefreshCw, FileCode, Paperclip, AlertCircle, Info, Zap
+  Sparkles, Send, User, CheckCircle2, ChevronDown, Lock, 
+  ArrowRight, RefreshCw, FileCode, Zap, AlertCircle
 } from 'lucide-react';
-import { FRONTIER_MODELS } from '@/config/models';
-import { SUBSCRIPTION_TIERS } from '@/config/tiers';
-import { ModelOption, SubscriptionTier, ChatMessage, UserSubscription } from '@/types';
+import { MODELS, canUseModel, getModel, type AIModel } from '@/config/models';
+import { PLANS, type PlanId } from '@/config/plans';
+import type { ChatMessage } from '@/types';
+import { useAuth } from '@/lib/client/auth-context';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
-  selectedModel: string;
+  selectedModelId: string;
   onSelectModel: (modelId: string) => void;
-  subscription: UserSubscription;
   onSendMessage: (prompt: string) => void;
   isGenerating: boolean;
   onOpenPricing: () => void;
-  activeThoughtSteps?: string[];
+  streamingReasoning?: string;
+  streamingDelta?: string;
 }
 
 export function ChatPanel({
   messages,
-  selectedModel,
+  selectedModelId,
   onSelectModel,
-  subscription,
   onSendMessage,
   isGenerating,
   onOpenPricing,
-  activeThoughtSteps = [],
+  streamingReasoning = '',
+  streamingDelta = '',
 }: ChatPanelProps) {
+  const { account } = useAuth();
   const [inputPrompt, setInputPrompt] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const currentModel = FRONTIER_MODELS.find((m) => m.id === selectedModel) || FRONTIER_MODELS[0];
-  const userTier = SUBSCRIPTION_TIERS[subscription.tier] || SUBSCRIPTION_TIERS.starter;
+  const currentModel = getModel(selectedModelId) ?? MODELS[0];
+  const userPlan: PlanId = account?.plan || 'free';
 
   // Auto-scroll chat to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, activeThoughtSteps, isGenerating]);
+  }, [messages, streamingReasoning, streamingDelta, isGenerating]);
 
   const handleSend = () => {
     if (!inputPrompt.trim() || isGenerating) return;
 
-    // Check FUP daily limit
-    if (subscription.dailyRequestsUsed >= subscription.dailyRequestsLimit) {
+    // Check daily request limit
+    if (account && account.today.requests >= account.today.requestLimit) {
       onOpenPricing();
       return;
     }
@@ -62,11 +64,6 @@ export function ChatPanel({
     }
   };
 
-  const isModelAllowedForUser = (model: ModelOption): boolean => {
-    const tierPriority: Record<SubscriptionTier, number> = { starter: 1, mid: 2, pro: 3 };
-    return tierPriority[subscription.tier] >= tierPriority[model.minTier];
-  };
-
   const quickPrompts = [
     { label: 'SaaS Analytics Matrix', prompt: 'Build a high-conversion SaaS analytics dashboard with revenue metrics, retention charts, and active user breakdown.' },
     { label: 'Apex Crypto Trading Hub', prompt: 'Build an ultra-modern crypto trading desk with live order books, token swaps, and multi-asset performance charts.' },
@@ -75,10 +72,10 @@ export function ChatPanel({
   ];
 
   const iterationChips = [
-    'Add Dark/Light mode switcher',
+    'Add Dark/Light mode toggle',
     'Make fully responsive for mobile screens',
     'Add dynamic search & filter bar',
-    'Add realistic dummy transaction data',
+    'Add realistic transaction data',
     'Add CSV/JSON export action',
   ];
 
@@ -96,8 +93,7 @@ export function ChatPanel({
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-xs text-white transition-all shadow-sm"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="font-medium">{currentModel.name}</span>
-              <span className="text-[10px] text-zinc-400">({currentModel.provider})</span>
+              <span className="font-medium">{currentModel.label}</span>
               <ChevronDown className="w-3.5 h-3.5 text-zinc-400 ml-1" />
             </button>
 
@@ -110,20 +106,22 @@ export function ChatPanel({
                 />
                 <div className="absolute left-0 mt-2 w-80 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden py-1.5 divide-y divide-zinc-800/60 max-h-[85vh] overflow-y-auto">
                   <div className="px-3.5 py-2 text-[11px] text-zinc-400 font-medium">
-                    Select Frontier AI Model (via OpenRouter)
+                    Frontier OpenRouter Models
                   </div>
 
-                  {/* Group models by provider */}
-                  {['Anthropic', 'OpenAI', 'Google'].map((provider) => {
-                    const providerModels = FRONTIER_MODELS.filter((m) => m.provider === provider);
+                  {['anthropic', 'openai', 'google'].map((provider) => {
+                    const providerModels = MODELS.filter((m) => m.provider === provider);
+                    const providerName =
+                      provider === 'anthropic' ? 'Anthropic' : provider === 'openai' ? 'OpenAI' : 'Google';
+
                     return (
                       <div key={provider} className="py-1">
                         <div className="px-3.5 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-                          {provider}
+                          {providerName}
                         </div>
                         {providerModels.map((model) => {
-                          const allowed = isModelAllowedForUser(model);
-                          const isSelected = model.id === selectedModel;
+                          const allowed = canUseModel(userPlan, model);
+                          const isSelected = model.id === selectedModelId;
 
                           return (
                             <button
@@ -143,9 +141,9 @@ export function ChatPanel({
                             >
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="font-semibold">{model.name}</span>
+                                  <span className="font-semibold">{model.label}</span>
                                   {model.badge && (
-                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-800 text-amber-300 border border-amber-500/20 font-medium">
                                       {model.badge}
                                     </span>
                                   )}
@@ -165,7 +163,7 @@ export function ChatPanel({
                                   className="flex items-center gap-1 text-[10px] text-amber-400 hover:underline shrink-0 font-medium cursor-pointer"
                                 >
                                   <Lock className="w-3 h-3" />
-                                  <span>{model.minTier.toUpperCase()}</span>
+                                  <span>{PLANS[model.minPlan].name}</span>
                                 </div>
                               ) : isSelected ? (
                                 <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
@@ -184,18 +182,18 @@ export function ChatPanel({
 
         {/* Daily limit badge */}
         <div className="text-[11px] text-zinc-400 font-mono">
-          FUP Limit:{' '}
+          FUP:{' '}
           <span className="text-white font-semibold">
-            {subscription.dailyRequestsLimit - subscription.dailyRequestsUsed}
+            {account ? account.today.requestLimit - account.today.requests : 5}
           </span>
-          /{subscription.dailyRequestsLimit}
+          /{account?.today.requestLimit || 5} req
         </div>
       </div>
 
       {/* Chat Messages Stream */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
         {messages.length === 0 ? (
-          /* Empty / Welcome State (Lovable hero style) */
+          /* Empty / Welcome State */
           <div className="py-6 space-y-6">
             <div className="space-y-2 text-center sm:text-left">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">
@@ -206,14 +204,14 @@ export function ChatPanel({
                 What do you want to build today?
               </h2>
               <p className="text-xs text-zinc-400 leading-relaxed max-w-md">
-                Type your app prompt or choose a starter template below. Aura generates full responsive code and renders the live interactive app instantly.
+                Type your app prompt or pick a starter below. Aura compiles full interactive code directly in your live sandbox.
               </p>
             </div>
 
             {/* Quick Inspiration Pills */}
             <div className="space-y-2">
               <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                Inspiration Prompts
+                Inspiration Starters
               </span>
               <div className="grid grid-cols-1 gap-2">
                 {quickPrompts.map((item, idx) => (
@@ -263,47 +261,28 @@ export function ChatPanel({
                           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                           Aura Copilot
                         </span>
-                        {msg.model && (
-                          <span className="text-[10px] font-mono text-zinc-400">
-                            {msg.model}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {msg.version && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300">
+                              v{msg.version}.0
+                            </span>
+                          )}
+                          {msg.credits !== undefined && (
+                            <span className="text-[10px] font-mono text-zinc-500">
+                              {msg.credits} cr
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <p className="leading-relaxed">{msg.content}</p>
+                      <p className="leading-relaxed whitespace-pre-line">{msg.content}</p>
 
-                      {/* Lovable-style Thought Steps List */}
-                      {msg.thoughtSteps && msg.thoughtSteps.length > 0 && (
-                        <div className="bg-zinc-950/60 rounded-xl p-3 border border-zinc-800/60 space-y-1.5">
-                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-                            Synthesis Pipeline:
-                          </span>
-                          {msg.thoughtSteps.map((step, sIdx) => (
-                            <div
-                              key={sIdx}
-                              className="flex items-center gap-2 text-[11px] text-zinc-300"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <span>{step}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Affected Files pills */}
-                      {msg.filesAffected && msg.filesAffected.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {msg.filesAffected.map((file, fIdx) => (
-                            <span
-                              key={fIdx}
-                              className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700/60"
-                            >
-                              <FileCode className="w-3 h-3 text-amber-400" />
-                              {file}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700/60">
+                          <FileCode className="w-3 h-3 text-amber-400" />
+                          index.html (Compiled App)
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -312,7 +291,7 @@ export function ChatPanel({
           ))
         )}
 
-        {/* Live Generating Animation (Lovable Thought Stream) */}
+        {/* Live SSE Generating Stream */}
         {isGenerating && (
           <div className="flex items-start gap-2.5">
             <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#FFFDF9] via-[#FAF4EA] to-[#EFE2CC] flex items-center justify-center shrink-0 border border-amber-200/30 text-black font-black text-[10px] animate-pulse">
@@ -321,18 +300,28 @@ export function ChatPanel({
             <div className="w-full max-w-[90%] rounded-2xl rounded-tl-none p-4 bg-zinc-900/90 border border-amber-500/20 text-xs text-zinc-200 space-y-3">
               <div className="flex items-center gap-2 text-amber-300 font-semibold">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Aura is architecting your application...</span>
+                <span>Streaming from {currentModel.label}...</span>
               </div>
 
-              {/* Dynamic steps stream */}
-              <div className="space-y-2 bg-zinc-950/70 rounded-xl p-3 border border-zinc-800/80">
-                {activeThoughtSteps.map((step, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-[11px] text-zinc-300 animate-fadeIn">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                    <span>{step}</span>
-                  </div>
-                ))}
-              </div>
+              {streamingReasoning && (
+                <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800/80 space-y-1">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+                    Reasoning Trace:
+                  </span>
+                  <p className="text-[11px] text-zinc-300 leading-relaxed font-mono whitespace-pre-wrap max-h-32 overflow-y-auto custom-scrollbar">
+                    {streamingReasoning}
+                  </p>
+                </div>
+              )}
+
+              {streamingDelta && (
+                <div className="p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800/60">
+                  <span className="text-[10px] text-zinc-500 block mb-1">Synthesizing code:</span>
+                  <pre className="text-[10px] text-zinc-400 font-mono overflow-hidden h-14 line-clamp-3">
+                    {streamingDelta.slice(-200)}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -340,7 +329,7 @@ export function ChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Iteration Chips (Lovable style) */}
+      {/* Quick Iteration Chips */}
       {messages.length > 0 && !isGenerating && (
         <div className="px-3 py-2 border-t border-zinc-800/60 bg-zinc-950/40 overflow-x-auto whitespace-nowrap flex gap-1.5 custom-scrollbar">
           {iterationChips.map((chip, idx) => (
@@ -375,7 +364,7 @@ export function ChatPanel({
           <div className="px-3 pb-2.5 pt-1 flex items-center justify-between border-t border-zinc-800/40">
             <div className="flex items-center gap-2 text-[11px] text-zinc-400">
               <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
-                {currentModel.name}
+                {currentModel.label}
               </span>
               <span className="hidden sm:inline">Press Enter to send</span>
             </div>

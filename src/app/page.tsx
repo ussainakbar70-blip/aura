@@ -1,278 +1,268 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from '@/lib/client/auth-context';
 import { Navbar } from '@/components/Navbar';
 import { ChatPanel } from '@/components/ChatPanel';
 import { PreviewPanel } from '@/components/PreviewPanel';
 import { CodePanel } from '@/components/CodePanel';
 import { PricingModal } from '@/components/PricingModal';
+import { AuthModal } from '@/components/AuthModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { ShareModal } from '@/components/ShareModal';
 import { ExportModal } from '@/components/ExportModal';
-import { FRONTIER_MODELS, DEFAULT_MODEL_ID } from '@/config/models';
-import { SUBSCRIPTION_TIERS, DEFAULT_TIER } from '@/config/tiers';
+import { ProjectsDrawer } from '@/components/ProjectsDrawer';
+import { DEFAULT_MODEL_ID, getModel, MODELS } from '@/config/models';
 import { synthesizeAppFromPrompt } from '@/lib/templates';
-import { SubscriptionTier, UserSubscription, ChatMessage, GeneratedApp } from '@/types';
+import type { ChatMessage, GenerateEvent } from '@/types';
 
-export default function AuraStudioPage() {
-  // State
+function AuraStudio() {
+  const { user, account, getToken, refreshAccount } = useAuth();
+
+  // Project state
+  const [projectId, setProjectId] = useState<string | undefined>(undefined);
   const [projectTitle, setProjectTitle] = useState('Apex SaaS Matrix');
   const [version, setVersion] = useState(1);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [viewMode, setViewMode] = useState<'split' | 'preview' | 'code'>('split');
-  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
+  const [selectedModelId, setSelectedModelId] = useState<string>(DEFAULT_MODEL_ID);
 
-  // Subscription state & Daily Limit FUP (stable default for prerendering)
-  const [subscription, setSubscription] = useState<UserSubscription>({
-    tier: DEFAULT_TIER,
-    active: true,
-    dailyRequestsUsed: 1,
-    dailyRequestsLimit: SUBSCRIPTION_TIERS.starter.dailyRequestLimit,
-    lastResetDate: '2026-10-11',
-  });
-
-  // OpenRouter BYOK Key
-  const [openRouterKey, setOpenRouterKey] = useState<string>('');
-
-  // Initial generated app
-  const initialApp = synthesizeAppFromPrompt('High-conversion SaaS analytics dashboard with revenue metrics and active user breakdown', 'Claude 3.5 Sonnet');
-  const [currentApp, setCurrentApp] = useState<GeneratedApp>({
-    id: 'app_init',
-    title: initialApp.title,
-    prompt: 'High-conversion SaaS analytics dashboard with revenue metrics and active user breakdown',
-    model: 'Claude 3.5 Sonnet',
-    version: 1,
-    htmlCode: initialApp.htmlCode,
-    files: initialApp.files,
-    thoughtSteps: initialApp.thoughtSteps,
-    createdAt: '2026-10-11T00:00:00.000Z',
-  });
+  // Initial code
+  const initialApp = synthesizeAppFromPrompt(
+    'High-conversion SaaS analytics dashboard with revenue metrics and active user breakdown',
+    'Claude Haiku 5.5'
+  );
+  const [htmlCode, setHtmlCode] = useState<string>(initialApp.htmlCode);
 
   // Chat conversation stream
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: 'msg_welcome',
+      id: 'msg_init',
       role: 'assistant',
-      content: 'Welcome to Aura. I have scaffolded your initial application workspace with luxury dark tokens, live responsive controls, and interactive mock state. Tell me what to build or modify next!',
-      model: 'Claude 3.5 Sonnet',
-      thoughtSteps: [
-        'Initialized workspace architecture',
-        'Configured Tailwind CSS & Lucide icons',
-        'Mounted interactive live sandbox',
-      ],
-      filesAffected: ['App.tsx', 'index.html', 'styles.css'],
-      timestamp: '12:00 PM',
+      content:
+        'Welcome to Aura. I have initialized your application with luxury dark tokens, live responsive controls, and interactive mock state. What would you like to build or refine next?',
+      createdAt: 1728637200000,
+      model: 'Claude Haiku 5.5',
     },
   ]);
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeThoughtSteps, setActiveThoughtSteps] = useState<string[]>([]);
+  const [streamingReasoning, setStreamingReasoning] = useState('');
+  const [streamingDelta, setStreamingDelta] = useState('');
 
   // Modals state
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
 
-  // Load persisted subscription & keys on client mount
+  // OpenRouter BYOK (client override)
+  const [openRouterKey, setOpenRouterKey] = useState('');
+
   useEffect(() => {
     try {
-      const storedSub = localStorage.getItem('aura_subscription');
-      const today = new Date().toISOString().split('T')[0];
-
-      if (storedSub) {
-        const parsed: UserSubscription = JSON.parse(storedSub);
-        // Reset daily usage if a new day has arrived (FUP reset)
-        if (parsed.lastResetDate !== today) {
-          parsed.dailyRequestsUsed = 0;
-          parsed.lastResetDate = today;
-        }
-        setSubscription(parsed);
-      }
-
-      const storedKey = localStorage.getItem('aura_openrouter_key');
-      if (storedKey) setOpenRouterKey(storedKey);
-    } catch (e) {
-      console.warn('Storage hydration notice:', e);
-    }
+      const stored = localStorage.getItem('aura_openrouter_key');
+      if (stored) setOpenRouterKey(stored);
+    } catch {}
   }, []);
-
-  // Save subscription updates
-  const saveSubscription = (sub: UserSubscription) => {
-    setSubscription(sub);
-    try {
-      localStorage.setItem('aura_subscription', JSON.stringify(sub));
-    } catch (e) {
-      console.warn('Failed to save subscription:', e);
-    }
-  };
 
   const handleSaveOpenRouterKey = (key: string) => {
     setOpenRouterKey(key);
     try {
       localStorage.setItem('aura_openrouter_key', key);
-    } catch (e) {
-      console.warn('Failed to save API key:', e);
+    } catch {}
+  };
+
+  // Switch to an existing project
+  const handleSelectProject = async (id: string) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/projects/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const proj = await res.json();
+        setProjectId(proj.id);
+        setProjectTitle(proj.title);
+        setVersion(proj.version);
+        setHtmlCode(proj.html);
+        setMessages(proj.messages || []);
+      }
+    } catch (err) {
+      console.warn('[aura] Failed to load project:', err);
     }
   };
 
-  const handleResetUsage = () => {
-    const updated = {
-      ...subscription,
-      dailyRequestsUsed: 0,
-    };
-    saveSubscription(updated);
+  // Start fresh project
+  const handleNewProject = () => {
+    setProjectId(undefined);
+    setProjectTitle('Untitled App');
+    setVersion(1);
+    const fresh = synthesizeAppFromPrompt('Aura Modern Application', 'Claude Haiku 5.5');
+    setHtmlCode(fresh.htmlCode);
+    setMessages([
+      {
+        id: `msg_${Date.now()}`,
+        role: 'assistant',
+        content: 'Started new canvas. Describe what you want to build!',
+        createdAt: Date.now(),
+      },
+    ]);
   };
 
-  const handleUpgradeSuccess = (newTier: SubscriptionTier, orderId?: string) => {
-    const tierConfig = SUBSCRIPTION_TIERS[newTier];
-    const updated: UserSubscription = {
-      tier: newTier,
-      active: true,
-      dailyRequestsUsed: 0,
-      dailyRequestsLimit: tierConfig.dailyRequestLimit,
-      lastResetDate: new Date().toISOString().split('T')[0],
-      orderId,
-    };
-    saveSubscription(updated);
-
-    // Auto-select tier's best model if current model is not allowed
-    const model = FRONTIER_MODELS.find((m) => m.id === selectedModel);
-    if (!model || (newTier === 'pro' && selectedModel.includes('haiku'))) {
-      setSelectedModel('anthropic/claude-3.7-sonnet');
+  // Restore snapshot version
+  const handleRestoreVersion = async (verNum: number) => {
+    if (!projectId) return;
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/projects/${projectId}/versions/${verNum}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHtmlCode(data.html);
+        setVersion(verNum);
+      }
+    } catch (err) {
+      console.warn('[aura] Failed to restore version:', err);
     }
   };
 
-  // Main prompt dispatch function
+  // Main SSE generation handler
   const handleSendMessage = async (promptText: string) => {
     if (!promptText.trim() || isGenerating) return;
 
-    // Check Daily Request Limit (Fair Usage Policy)
-    if (subscription.dailyRequestsUsed >= subscription.dailyRequestsLimit) {
+    // Check account daily requests
+    if (account && account.today.requests >= account.today.requestLimit) {
       setIsPricingOpen(true);
       return;
     }
 
-    const userMessage: ChatMessage = {
-      id: `msg_user_${Date.now()}`,
+    const token = await getToken();
+    const userMsg: ChatMessage = {
+      id: `msg_u_${Date.now()}`,
       role: 'user',
       content: promptText,
-      timestamp: new Date().toLocaleTimeString(),
+      createdAt: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMsg]);
     setIsGenerating(true);
-
-    // Simulated progressive thought steps for Lovable-style realism
-    const initialSteps = [
-      'Deconstructing prompt requirements & UI component hierarchy...',
-      'Synthesizing state schema and event listeners...',
-      'Applying luxury dark mode design tokens & fluid animations...',
-    ];
-    setActiveThoughtSteps(initialSteps);
+    setStreamingReasoning('');
+    setStreamingDelta('');
 
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...(openRouterKey ? { 'x-openrouter-key': openRouterKey } : {}),
         },
         body: JSON.stringify({
           prompt: promptText,
-          model: selectedModel,
+          modelId: selectedModelId,
+          projectId,
         }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to synthesize application');
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson?.error?.message || errJson?.error || 'Generation failed.');
       }
 
-      const nextVersion = version + 1;
-      setVersion(nextVersion);
-      if (data.title && !projectTitle.includes('Matrix')) {
-        setProjectTitle(data.title);
+      if (!res.body) throw new Error('No stream received.');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+
+          try {
+            const event: GenerateEvent = JSON.parse(trimmed.slice(5).trim());
+
+            if (event.type === 'reasoning') {
+              setStreamingReasoning((prev) => prev + event.text);
+            } else if (event.type === 'delta') {
+              setStreamingDelta((prev) => prev + event.text);
+            } else if (event.type === 'done') {
+              setHtmlCode(event.html);
+              setVersion(event.version);
+              setProjectTitle(event.title);
+              setMessages((prev) => [...prev, event.message]);
+              await refreshAccount();
+            } else if (event.type === 'error') {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `msg_err_${Date.now()}`,
+                  role: 'assistant',
+                  content: `Error: ${event.message}`,
+                  createdAt: Date.now(),
+                  error: true,
+                },
+              ]);
+            }
+          } catch {}
+        }
       }
-
-      // Update active app
-      setCurrentApp({
-        id: `app_${Date.now()}`,
-        title: data.title || projectTitle,
-        prompt: promptText,
-        model: data.model || 'Claude 3.5 Sonnet',
-        version: nextVersion,
-        htmlCode: data.htmlCode,
-        files: data.files || currentApp.files,
-        thoughtSteps: data.thoughtSteps || initialSteps,
-        createdAt: new Date().toISOString(),
-      });
-
-      // Increment daily limit usage
-      const updatedSub: UserSubscription = {
-        ...subscription,
-        dailyRequestsUsed: subscription.dailyRequestsUsed + 1,
-      };
-      saveSubscription(updatedSub);
-
-      // Append assistant message
-      const assistantMessage: ChatMessage = {
-        id: `msg_asst_${Date.now()}`,
-        role: 'assistant',
-        content: `I've synthesized the changes for "${promptText}". Live preview has been recompiled with hot reload in the sandbox.`,
-        model: data.model,
-        thoughtSteps: data.thoughtSteps || initialSteps,
-        filesAffected: (data.files || []).map((f: any) => f.name),
-        timestamp: new Date().toLocaleTimeString(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: any) {
-      console.error('Error during generation:', err);
+      console.error('[aura] Generation error:', err);
       // Fallback local synthesis
-      const fallback = synthesizeAppFromPrompt(promptText, 'Claude 3.5 Sonnet');
-      const nextVersion = version + 1;
-      setVersion(nextVersion);
-      setCurrentApp({
-        id: `app_${Date.now()}`,
-        title: fallback.title,
-        prompt: promptText,
-        model: 'Claude 3.5 Sonnet',
-        version: nextVersion,
-        htmlCode: fallback.htmlCode,
-        files: fallback.files,
-        thoughtSteps: fallback.thoughtSteps,
-        createdAt: new Date().toISOString(),
-      });
-
-      const updatedSub: UserSubscription = {
-        ...subscription,
-        dailyRequestsUsed: subscription.dailyRequestsUsed + 1,
-      };
-      saveSubscription(updatedSub);
-
+      const fallback = synthesizeAppFromPrompt(promptText, 'Aura Synthesis');
+      setHtmlCode(fallback.htmlCode);
+      setVersion((v) => v + 1);
       setMessages((prev) => [
         ...prev,
         {
-          id: `msg_asst_${Date.now()}`,
+          id: `msg_fb_${Date.now()}`,
           role: 'assistant',
-          content: `Synthesized application based on your prompt: "${promptText}".`,
-          model: 'Aura Intelligent Synthesis',
-          thoughtSteps: fallback.thoughtSteps,
-          filesAffected: fallback.files.map((f) => f.name),
-          timestamp: new Date().toLocaleTimeString(),
+          content: `Compiled updated version for "${promptText}".`,
+          createdAt: Date.now(),
         },
       ]);
     } finally {
       setIsGenerating(false);
-      setActiveThoughtSteps([]);
+      setStreamingReasoning('');
+      setStreamingDelta('');
     }
   };
 
+  const files = [
+    {
+      name: 'index.html',
+      language: 'html',
+      content: htmlCode,
+    },
+    {
+      name: 'App.tsx',
+      language: 'typescript',
+      content: `// Aura Standalone React Component Export\n// Rendered live in index.html with Tailwind CSS\nexport default function App() {\n  return (\n    <iframe srcDoc={htmlCode} className="w-full h-full border-0" />\n  );\n}`,
+    },
+    {
+      name: 'styles.css',
+      language: 'css',
+      content: `/* Aura Dark Mode Luxury Tokens */\n@layer base {\n  body { background-color: #09090b; color: #f4f4f5; }\n}`,
+    },
+  ];
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#09090b] text-white">
-      {/* Top Navigation */}
+      {/* Navbar */}
       <Navbar
         projectTitle={projectTitle}
         onUpdateTitle={setProjectTitle}
@@ -280,17 +270,18 @@ export default function AuraStudioPage() {
         onChangeViewport={setViewport}
         viewMode={viewMode}
         onChangeViewMode={setViewMode}
-        subscription={subscription}
         onOpenPricing={() => setIsPricingOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenShare={() => setIsShareOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenProjects={() => setIsProjectsOpen(true)}
         version={version}
       />
 
-      {/* Main Workspace Dual-Pane (Lovable layout) */}
+      {/* Main Workspace Dual-Pane */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Pane: Chat / Generation Copilot */}
+        {/* Left Pane: Chat / Copilot */}
         {(viewMode === 'split' || viewMode === 'code') && (
           <div
             className={`h-full transition-all duration-200 ${
@@ -299,25 +290,25 @@ export default function AuraStudioPage() {
           >
             <ChatPanel
               messages={messages}
-              selectedModel={selectedModel}
-              onSelectModel={setSelectedModel}
-              subscription={subscription}
+              selectedModelId={selectedModelId}
+              onSelectModel={setSelectedModelId}
               onSendMessage={handleSendMessage}
               isGenerating={isGenerating}
               onOpenPricing={() => setIsPricingOpen(true)}
-              activeThoughtSteps={activeThoughtSteps}
+              streamingReasoning={streamingReasoning}
+              streamingDelta={streamingDelta}
             />
           </div>
         )}
 
-        {/* Right Pane: Live Interactive Sandbox OR Code Inspector */}
+        {/* Right Pane: Sandbox or Code Inspector */}
         <div className="flex-1 h-full overflow-hidden flex flex-col bg-black">
           {viewMode === 'code' ? (
-            <CodePanel files={currentApp.files} title={currentApp.title} />
+            <CodePanel files={files} title={projectTitle} />
           ) : (
             <PreviewPanel
-              htmlCode={currentApp.htmlCode}
-              title={currentApp.title}
+              htmlCode={htmlCode}
+              title={projectTitle}
               viewport={viewport}
               onChangeViewport={setViewport}
               isGenerating={isGenerating}
@@ -331,32 +322,57 @@ export default function AuraStudioPage() {
       <PricingModal
         isOpen={isPricingOpen}
         onClose={() => setIsPricingOpen(false)}
-        currentSubscription={subscription}
-        onUpgradeSuccess={handleUpgradeSuccess}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
+
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
 
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         openRouterKey={openRouterKey}
         onSaveOpenRouterKey={handleSaveOpenRouterKey}
-        subscription={subscription}
-        onResetUsage={handleResetUsage}
+        subscription={{
+          tier: account?.plan === 'free' ? 'starter' : (account?.plan as any) || 'starter',
+          active: true,
+          dailyRequestsUsed: account?.today.requests || 0,
+          dailyRequestsLimit: account?.today.requestLimit || 15,
+          lastResetDate: '2026-10-11',
+        }}
+        onResetUsage={refreshAccount}
       />
 
       <ShareModal
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
-        title={currentApp.title}
+        title={projectTitle}
       />
 
       <ExportModal
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
-        title={currentApp.title}
-        files={currentApp.files}
-        htmlCode={currentApp.htmlCode}
+        title={projectTitle}
+        files={files}
+        htmlCode={htmlCode}
+      />
+
+      <ProjectsDrawer
+        isOpen={isProjectsOpen}
+        onClose={() => setIsProjectsOpen(false)}
+        currentProjectId={projectId}
+        onSelectProject={handleSelectProject}
+        onNewProject={handleNewProject}
+        onRestoreVersion={handleRestoreVersion}
+        currentVersion={version}
       />
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <AuthProvider>
+      <AuraStudio />
+    </AuthProvider>
   );
 }
