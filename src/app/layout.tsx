@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aura | Frontier Vibe-Coding Platform",
-  description: "Type app prompts, select frontier models via OpenRouter, and preview production-ready apps instantly.",
+  title: "Aura | Autonomous AI Software Studio",
+  description: "Type app prompts, watch Aura Autonomous Engine architect full-stack code, and preview production-ready applications instantly with reactive state and persistence.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
