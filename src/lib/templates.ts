@@ -11,7 +11,7 @@ export interface SynthesizedApp {
   htmlCode: string;
 }
 
-export function synthesizeAppFromPrompt(prompt: string, modelName: string): SynthesizedApp {
+export function synthesizeAppFromPrompt(prompt: string, modelName: string = 'Aura Autonomous Engine'): SynthesizedApp {
   const p = prompt.toLowerCase();
 
   let title = 'Modern Web Application';

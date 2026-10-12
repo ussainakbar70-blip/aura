@@ -284,7 +284,7 @@ export function PricingModal({ isOpen, onClose, onOpenAuth }: PricingModalProps)
           <div className="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800/60 text-xs text-zinc-400 flex items-start gap-3">
             <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold text-white">Fair Usage Policy (FUP):</span> Every request is measured against real OpenRouter token costs and deducted from your monthly credit allowance. Daily limits reset every 24 hours at 00:00 UTC to maintain healthy infrastructure margins.
+              <span className="font-semibold text-white">Fair Usage Policy (FUP):</span> Every generation is measured against actual compute token consumption and deducted from your monthly credit allowance. Daily limits reset every 24 hours at 00:00 UTC to maintain dedicated infrastructure performance.
             </div>
           </div>
         </div>

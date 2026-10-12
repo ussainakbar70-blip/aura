@@ -1,17 +1,11 @@
 /**
- * Aura plan economics.
+ * Aura Plan Economics & Capability Tiers.
  *
  * Every plan converts the money a user pays into a monthly "compute budget",
- * expressed in credits (1 credit = $0.01 of real OpenRouter spend, incl. fees).
+ * expressed in credits (1 credit = $0.01 of real compute spend, incl. fees).
  *
- *   monthlyCredits = (priceINR / USD_INR) * (1 - PAYMENT_FEE_RATE) - targetMarginUSD
- *
- * Because every request is billed against this budget using the *actual* cost
- * OpenRouter reports, the target profit margin is protected no matter which
- * model a user picks. Daily caps (requests + credits) enforce fair usage so a
- * single day can't drain a month's budget.
- *
- * Tune these numbers freely — everything else in the app derives from them.
+ * All upstream model details are hidden; plans describe Aura Engine capabilities,
+ * token output quotas, state persistence features, and daily fair usage limits.
  */
 
 export type PlanId = 'free' | 'starter' | 'mid' | 'pro';
@@ -20,13 +14,13 @@ export type PlanId = 'free' | 'starter' | 'mid' | 'pro';
 export const USD_INR = 88;
 /** Cashfree transaction fee + GST buffer (fraction of revenue). */
 export const PAYMENT_FEE_RATE = 0.025;
-/** OpenRouter platform fee on credit purchases (fraction of compute cost). */
+/** Platform buffer on compute operations. */
 export const OPENROUTER_FEE_RATE = 0.055;
 /** Value of one Aura credit in USD of compute. */
 export const USD_PER_CREDIT = 0.01;
-/** Length of one paid billing period. */
+/** Length of one paid billing period in days. */
 export const PERIOD_DAYS = 30;
-/** Requests that can't afford at least this many output tokens are rejected up-front. */
+/** Minimum output tokens reserved per generation. */
 export const MIN_OUTPUT_TOKENS = 3000;
 
 export interface Plan {
@@ -62,7 +56,7 @@ export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: 'free',
     name: 'Free',
-    tagline: 'Try Aura with fast models.',
+    tagline: 'Instant prototyping with Aura Core Engine.',
     priceINR: 0,
     priceUSD: 0,
     targetMarginUSD: 0,
@@ -70,12 +64,17 @@ export const PLANS: Record<PlanId, Plan> = {
     dailyCreditCap: 6,
     dailyRequestLimit: 5,
     maxOutputTokens: 8000,
-    features: ['5 generations / day', 'Claude Haiku & GPT-6 Luna', 'Live preview & code export', 'Public share links'],
+    features: [
+      '5 generations / day',
+      'Aura Core Synthesis Engine',
+      'Live interactive preview sandbox',
+      'One-click multi-file code export',
+    ],
   },
   starter: {
     id: 'starter',
     name: 'Starter',
-    tagline: 'For hobby projects and quick prototypes.',
+    tagline: 'For creators, developers, and agile prototypes.',
     priceINR: 449,
     priceUSD: 5,
     targetMarginUSD: 2,
@@ -84,16 +83,17 @@ export const PLANS: Record<PlanId, Plan> = {
     dailyRequestLimit: 15,
     maxOutputTokens: 12000,
     features: [
-      `${starterCredits} credits / month`,
+      `${starterCredits} compute credits / month`,
       '15 generations / day (strict FUP)',
-      'Adds Gemini 3.8 Flash & Flash Lite',
-      'Version history & restore',
+      'Aura Advanced Synthesis with CRUD & State',
+      'Full project version history & rollback',
+      'LocalStorage auto-persistence enabled',
     ],
   },
   mid: {
     id: 'mid',
     name: 'Creator',
-    tagline: 'Flagship models for serious builders.',
+    tagline: 'Flagship autonomous intelligence for serious builders.',
     priceINR: 1329,
     priceUSD: 15,
     targetMarginUSD: 7,
@@ -103,16 +103,18 @@ export const PLANS: Record<PlanId, Plan> = {
     maxOutputTokens: 16000,
     highlight: true,
     features: [
-      `${midCredits} credits / month`,
+      `${midCredits} compute credits / month`,
       '60 generations / day',
-      'Claude Sonnet 5.5, GPT-6.1 Sol, Gemini 3.1 Pro',
-      'Larger apps (16k output tokens)',
+      'Aura Turbo Intelligence (16k token output)',
+      'Deep architectural reasoning & data schemas',
+      'Interactive charts, modal flows & CSV export',
+      'Priority generation queue',
     ],
   },
   pro: {
     id: 'pro',
     name: 'Pro',
-    tagline: 'Maximum power, every frontier model.',
+    tagline: 'Maximum power & depth for enterprise-grade apps.',
     priceINR: 2649,
     priceUSD: 30,
     targetMarginUSD: 15,
@@ -121,10 +123,12 @@ export const PLANS: Record<PlanId, Plan> = {
     dailyRequestLimit: 200,
     maxOutputTokens: 20000,
     features: [
-      `${proCredits} credits / month`,
+      `${proCredits} compute credits / month`,
       '200 generations / day',
-      'Everything + Claude Opus 5.5',
-      'Largest apps (20k output tokens)',
+      'Aura Autonomous Studio Max (20k token output)',
+      'Complex multi-panel workflows & state machines',
+      'Highest reasoning depth & self-healing code',
+      'Unlimited project forks & version branching',
     ],
   },
 };
@@ -136,12 +140,12 @@ export function isPlanId(value: unknown): value is PlanId {
   return typeof value === 'string' && value in PLANS;
 }
 
-/** Convert a raw OpenRouter USD cost into Aura credits (includes OpenRouter's fee). */
+/** Convert a raw USD cost into Aura credits (includes fee buffer). */
 export function usdToCredits(usd: number): number {
   return (usd * (1 + OPENROUTER_FEE_RATE)) / USD_PER_CREDIT;
 }
 
-/** Convert Aura credits back into raw OpenRouter USD spend. */
+/** Convert Aura credits back into raw USD spend. */
 export function creditsToUsd(credits: number): number {
   return (credits * USD_PER_CREDIT) / (1 + OPENROUTER_FEE_RATE);
 }

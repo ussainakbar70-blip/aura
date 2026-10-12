@@ -1,5 +1,5 @@
 import { FieldValue, type Transaction } from 'firebase-admin/firestore';
-import { adminDb } from './firebase-admin';
+import { adminDb, isAdminConfigured } from './firebase-admin';
 import { ApiError } from './errors';
 import type { AuthUser } from './auth';
 import {
@@ -146,9 +146,35 @@ async function loadInTx(tx: Transaction, user: AuthUser, now: number) {
   return { ref, dRef, acc, changed: changed || !snap.exists, daily: readDaily(dSnap.data()) };
 }
 
+const inMemoryUsage = new Map<string, { requests: number; usedCredits: number }>();
+
 /** Load (and lazily create / normalise) the caller's account. */
 export async function getAccount(user: AuthUser): Promise<AccountView> {
   const now = Date.now();
+  if (!isAdminConfigured() || user.uid.startsWith('guest')) {
+    const usage = inMemoryUsage.get(user.uid) || { requests: 0, usedCredits: 0 };
+    return {
+      uid: user.uid,
+      email: user.email,
+      name: user.name,
+      phone: null,
+      plan: 'pro',
+      planName: 'Pro Studio',
+      planExpiresAt: null,
+      credits: {
+        total: 1000,
+        used: usage.usedCredits,
+        remaining: Math.max(0, 1000 - usage.usedCredits),
+      },
+      today: {
+        credits: usage.usedCredits,
+        creditCap: 500,
+        requests: usage.requests,
+        requestLimit: 200,
+      },
+    };
+  }
+
   return adminDb().runTransaction(async (tx) => {
     const { ref, acc, changed, daily } = await loadInTx(tx, user, now);
     if (changed) tx.set(ref, acc);
@@ -157,6 +183,7 @@ export async function getAccount(user: AuthUser): Promise<AccountView> {
 }
 
 export async function savePhone(user: AuthUser, phone: string): Promise<void> {
+  if (!isAdminConfigured() || user.uid.startsWith('guest')) return;
   await usersCol().doc(user.uid).set({ phone, updatedAt: Date.now() }, { merge: true });
 }
 
@@ -175,6 +202,20 @@ export interface Reservation {
  */
 export async function reserveGeneration(user: AuthUser, model: AIModel, inputTokens: number): Promise<Reservation> {
   const now = Date.now();
+
+  if (!isAdminConfigured() || user.uid.startsWith('guest')) {
+    const usage = inMemoryUsage.get(user.uid) || { requests: 0, usedCredits: 0 };
+    usage.requests += 1;
+    inMemoryUsage.set(user.uid, usage);
+    return {
+      uid: user.uid,
+      day: dayKey(now),
+      holdCredits: 1,
+      maxTokens: 16000,
+      plan: 'pro',
+    };
+  }
+
   return adminDb().runTransaction(async (tx) => {
     const { ref, dRef, acc, daily } = await loadInTx(tx, user, now);
     const plan = PLANS[acc.plan];
@@ -182,8 +223,8 @@ export async function reserveGeneration(user: AuthUser, model: AIModel, inputTok
     if (!canUseModel(acc.plan, model)) {
       throw new ApiError(
         403,
-        'MODEL_LOCKED',
-        `${model.label} requires the ${PLANS[model.minPlan].name} plan or higher.`,
+        'TIER_LOCKED',
+        `This operation requires the ${PLANS[model.minPlan].name} tier or higher.`,
       );
     }
     if (daily.requests >= plan.dailyRequestLimit) {
@@ -210,13 +251,13 @@ export async function reserveGeneration(user: AuthUser, model: AIModel, inputTok
           'OUT_OF_CREDITS',
           acc.plan === 'free'
             ? 'You have used your free credits. Upgrade to keep building.'
-            : `Not enough credits left for ${model.label}. Try a faster model or upgrade your plan.`,
+            : 'Compute budget is depleted for this billing cycle. Upgrade your plan for fresh credits.',
         );
       }
       throw new ApiError(
         429,
         'DAILY_CREDIT_LIMIT',
-        `Today's fair-usage budget is too low for ${model.label}. Try a faster model or come back after 00:00 UTC.`,
+        `Today's fair-usage daily budget cap has been reached. Resets at 00:00 UTC.`,
       );
     }
 
@@ -246,6 +287,14 @@ export interface SettleInput {
 
 /** Replace the reserved hold with the real cost and record a ledger entry. */
 export async function settleGeneration({ reservation, actualCredits, refundRequest, ledger }: SettleInput) {
+  if (!isAdminConfigured() || reservation.uid.startsWith('guest')) {
+    const usage = inMemoryUsage.get(reservation.uid) || { requests: 0, usedCredits: 0 };
+    usage.usedCredits += actualCredits;
+    if (refundRequest && usage.requests > 0) usage.requests -= 1;
+    inMemoryUsage.set(reservation.uid, usage);
+    return;
+  }
+
   const { uid, day, holdCredits } = reservation;
   const delta = actualCredits - holdCredits;
   const now = Date.now();

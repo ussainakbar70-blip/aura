@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   RotateCw, ExternalLink, Smartphone, Tablet, Monitor, 
-  Terminal, ShieldCheck, Check, Copy, Maximize2, Sparkles, AlertCircle
+  Terminal, ShieldCheck, Check, Copy, Maximize2, Sparkles, 
+  AlertCircle, Wrench, X
 } from 'lucide-react';
 
 interface PreviewPanelProps {
@@ -13,6 +14,7 @@ interface PreviewPanelProps {
   onChangeViewport: (vp: 'desktop' | 'tablet' | 'mobile') => void;
   isGenerating: boolean;
   version: number;
+  onAutoFix?: (errorText: string) => void;
 }
 
 export function PreviewPanel({
@@ -22,13 +24,16 @@ export function PreviewPanel({
   onChangeViewport,
   isGenerating,
   version,
+  onAutoFix,
 }: PreviewPanelProps) {
   const [iframeKey, setIframeKey] = useState(0);
   const [showConsole, setShowConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState<{ type: string; message: string; time: string }[]>([]);
+  const [latestError, setLatestError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const handleRefresh = () => {
+    setLatestError(null);
     setIframeKey((prev) => prev + 1);
   };
 
@@ -42,20 +47,74 @@ export function PreviewPanel({
   useEffect(() => {
     const handleWindowMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'AURA_SANDBOX_LOG') {
+        const level = event.data.level || 'info';
+        const msg = event.data.message || JSON.stringify(event.data);
         setConsoleLogs((prev) => [
-          ...prev.slice(-20),
+          ...prev.slice(-30),
           {
-            type: event.data.level || 'info',
-            message: event.data.message || JSON.stringify(event.data),
+            type: level,
+            message: msg,
             time: new Date().toLocaleTimeString(),
           },
         ]);
+
+        if (level === 'error' && typeof msg === 'string' && msg.trim()) {
+          setLatestError(msg.slice(0, 140));
+        }
       }
     };
 
     window.addEventListener('message', handleWindowMessage);
     return () => window.removeEventListener('message', handleWindowMessage);
   }, []);
+
+  const sandboxedHtml = React.useMemo(() => {
+    if (!htmlCode) return '';
+    const telemetryScript = `
+      <script>
+        (function() {
+          const originalLog = console.log;
+          const originalError = console.error;
+          const originalWarn = console.warn;
+          function send(level, args) {
+            try {
+              const message = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+              window.parent.postMessage({ type: 'AURA_SANDBOX_LOG', level: level, message: message }, '*');
+            } catch(e) {}
+          }
+          console.log = function(...args) { originalLog.apply(console, args); send('info', args); };
+          console.warn = function(...args) { originalWarn.apply(console, args); send('warn', args); };
+          console.error = function(...args) { originalError.apply(console, args); send('error', args); };
+          window.addEventListener('error', function(e) {
+            send('error', [e.message]);
+          });
+          // Auto-render Lucide icons on any dynamic DOM changes
+          if (window.MutationObserver) {
+            const observer = new MutationObserver(function() {
+              if (window.lucide && window.lucide.createIcons) {
+                window.lucide.createIcons();
+              }
+            });
+            window.addEventListener('load', function() {
+              if (document.body) {
+                observer.observe(document.body, { childList: true, subtree: true });
+              }
+            });
+          }
+        })();
+      </script>
+    `;
+
+    if (htmlCode.includes('<head>')) {
+      return htmlCode.replace('<head>', `<head>${telemetryScript}`);
+    } else if (htmlCode.includes('<head ')) {
+      return htmlCode.replace(/<head[^>]*>/, `$&${telemetryScript}`);
+    } else if (htmlCode.includes('<!DOCTYPE') || htmlCode.includes('<html')) {
+      return htmlCode.replace(/<html[^>]*>/, `$&<head>${telemetryScript}</head>`);
+    } else {
+      return `${telemetryScript}${htmlCode}`;
+    }
+  }, [htmlCode]);
 
   const viewportStyles = {
     desktop: 'w-full h-full rounded-none border-0',
@@ -124,6 +183,38 @@ export function PreviewPanel({
         </div>
       </div>
 
+      {/* Self-Healing Diagnostic Alert Bar (Better than Lovable / Emergent) */}
+      {latestError && (
+        <div className="bg-amber-950/80 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between text-xs z-20 backdrop-blur-md">
+          <div className="flex items-center gap-2 text-amber-200 truncate">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="font-semibold text-white">Sandbox Exception:</span>
+            <span className="truncate font-mono text-[11px] text-amber-300">{latestError}</span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            {onAutoFix && (
+              <button
+                onClick={() => {
+                  onAutoFix(latestError);
+                  setLatestError(null);
+                }}
+                className="px-2.5 py-1 rounded bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-semibold text-[11px] flex items-center gap-1 shadow-sm"
+              >
+                <Wrench className="w-3 h-3" />
+                <span>Auto-Fix with Aura</span>
+              </button>
+            )}
+            <button
+              onClick={() => setLatestError(null)}
+              className="p-1 text-zinc-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Preview Sandbox Canvas */}
       <div className="flex-1 bg-zinc-950/40 relative flex items-center justify-center p-2 overflow-auto custom-scrollbar">
         {/* Ambient Grid Wallpaper */}
@@ -144,7 +235,7 @@ export function PreviewPanel({
               </div>
             </div>
             <p className="text-xs font-semibold text-white tracking-wide">
-              Rendering interactive application in live sandbox...
+              Aura Autonomous Engine is compiling code into live sandbox...
             </p>
           </div>
         )}
@@ -154,7 +245,7 @@ export function PreviewPanel({
           <iframe
             key={iframeKey}
             ref={iframeRef}
-            srcDoc={htmlCode}
+            srcDoc={sandboxedHtml}
             title={title}
             sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"
             className="w-full h-full bg-black border-0"
@@ -189,20 +280,26 @@ export function PreviewPanel({
 
       {/* Console Drawer */}
       {showConsole && (
-        <div className="h-40 border-t border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] overflow-y-auto custom-scrollbar z-30">
+        <div className="h-44 border-t border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] overflow-y-auto custom-scrollbar z-30">
           <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80 text-zinc-400">
-            <span>Runtime Logs & Sandbox Diagnostics</span>
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>Runtime Logs & Sandbox Diagnostics</span>
+            </span>
             <button
               onClick={() => setConsoleLogs([])}
-              className="hover:text-white text-[10px]"
+              className="hover:text-white text-[10px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800"
             >
               Clear
             </button>
           </div>
           <div className="space-y-1 pt-2">
-            <div className="text-zinc-500">[System] Sandbox mounted with Tailwind CSS and Lucide engine.</div>
+            <div className="text-zinc-500">[System] Sandbox mounted with Tailwind CSS, Lucide icons, and reactive state telemetry.</div>
             {consoleLogs.map((log, idx) => (
-              <div key={idx} className="text-zinc-300">
+              <div 
+                key={idx} 
+                className={`${log.type === 'error' ? 'text-red-400 bg-red-950/20 px-1 py-0.5 rounded' : log.type === 'warn' ? 'text-amber-400' : 'text-zinc-300'}`}
+              >
                 <span className="text-zinc-500">[{log.time}]</span> {log.message}
               </div>
             ))}

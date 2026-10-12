@@ -1,16 +1,14 @@
 import { requireUser } from '@/lib/server/auth';
-import { getAccount, reserveGeneration, settleGeneration, toAccountView } from '@/lib/server/billing';
+import { getAccount, reserveGeneration, settleGeneration } from '@/lib/server/billing';
 import { ApiError, errorResponse, readJson } from '@/lib/server/errors';
-import { getModel, MODELS } from '@/config/models';
+import { resolveBackendModel, AURA_ENGINE_DISPLAY } from '@/config/models';
 import { createProject, getProject, recordIteration } from '@/lib/server/projects';
 import { streamOpenRouter } from '@/lib/server/openrouter';
 import { usdToCredits } from '@/config/plans';
 import type { ChatMessage, GenerateEvent } from '@/types';
 
-
 interface GenerateBody {
   prompt: string;
-  modelId?: string;
   projectId?: string;
 }
 
@@ -24,7 +22,10 @@ export async function POST(req: Request) {
     }
 
     const promptText = body.prompt.trim();
-    const model = getModel(body.modelId) ?? MODELS[0];
+
+    // Fetch user account to dynamically resolve internal backend model based on tier
+    const account = await getAccount(user);
+    const internalModel = resolveBackendModel(account.plan);
 
     // Check existing project if iterating
     let existingHtml: string | null = null;
@@ -41,13 +42,15 @@ export async function POST(req: Request) {
       }
     }
 
+    const customApiKey = req.headers.get('x-openrouter-key') || undefined;
+
     // Estimate input tokens for reservation
     const inputTokenEstimate = Math.ceil(
       (promptText.length + (existingHtml?.length ?? 0) + 1200) / 4
     );
 
     // Atomically reserve generation
-    const reservation = await reserveGeneration(user, model, inputTokenEstimate);
+    const reservation = await reserveGeneration(user, internalModel, inputTokenEstimate);
 
     // Create ReadableStream for SSE response
     const encoder = new TextEncoder();
@@ -67,20 +70,21 @@ export async function POST(req: Request) {
 
         sendEvent({
           type: 'start',
-          model: model.label,
+          model: AURA_ENGINE_DISPLAY.name,
           maxTokens: reservation.maxTokens,
         });
 
         try {
           const streamResult = await streamOpenRouter(
-            model,
+            internalModel,
             promptText,
             existingHtml,
             reservation.maxTokens,
             {
               onReasoning: (text) => sendEvent({ type: 'reasoning', text }),
               onDelta: (text) => sendEvent({ type: 'delta', text }),
-            }
+            },
+            customApiKey
           );
 
           const actualCredits = usdToCredits(streamResult.costUsd);
@@ -88,13 +92,13 @@ export async function POST(req: Request) {
           const asstMsg: ChatMessage = {
             id: `msg_${asstNow}_asst`,
             role: 'assistant',
-            content: streamResult.reasoningText || `Generated ${streamResult.title}`,
+            content: streamResult.reasoningText || `Architected and synthesized ${streamResult.title} with full interactive state.`,
             createdAt: asstNow,
-            model: model.label,
+            model: AURA_ENGINE_DISPLAY.name,
             credits: Math.round(actualCredits * 100) / 100,
           };
 
-          // Save to Firestore
+          // Save to Firestore / local project database
           let finalProjectId = body.projectId;
           let finalVersion = 1;
           let finalTitle = streamResult.title;
@@ -102,7 +106,7 @@ export async function POST(req: Request) {
           if (body.projectId) {
             const iterResult = await recordIteration(user.uid, body.projectId, {
               html: streamResult.html,
-              model: model.id,
+              model: 'aura-engine',
               prompt: promptText,
               userMessage: userMsg,
               assistantMessage: asstMsg,
@@ -114,7 +118,7 @@ export async function POST(req: Request) {
             const newProj = await createProject(user.uid, {
               title: streamResult.title,
               html: streamResult.html,
-              model: model.id,
+              model: 'aura-engine',
               prompt: promptText,
               userMessage: userMsg,
               assistantMessage: asstMsg,
@@ -130,7 +134,7 @@ export async function POST(req: Request) {
             refundRequest: false,
             ledger: {
               projectId: finalProjectId || 'unknown',
-              model: model.id,
+              model: 'aura-engine',
               promptTokens: streamResult.promptTokens,
               completionTokens: streamResult.completionTokens,
               costUsd: streamResult.costUsd,
@@ -166,7 +170,7 @@ export async function POST(req: Request) {
               refundRequest: true,
               ledger: {
                 projectId: body.projectId || 'failed',
-                model: model.id,
+                model: 'aura-engine',
                 promptTokens: inputTokenEstimate,
                 completionTokens: 0,
                 costUsd: 0,

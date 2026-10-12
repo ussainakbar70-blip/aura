@@ -1,136 +1,90 @@
 import { PLAN_RANK, type PlanId } from './plans';
 
-export type Provider = 'anthropic' | 'openai' | 'google';
-
-export interface AIModel {
-  /** OpenRouter model id. */
+export interface InternalAIModel {
+  /** Internal OpenRouter model id. */
   id: string;
-  label: string;
-  provider: Provider;
+  internalLabel: string;
   description: string;
-  /** USD per 1M input tokens (OpenRouter list price). */
   inputPerM: number;
-  /** USD per 1M output tokens (OpenRouter list price). */
   outputPerM: number;
   minPlan: PlanId;
-  reasoningEffort: 'low' | 'medium';
-  badge?: string;
+  maxTokens: number;
 }
 
 /**
- * Verified against https://openrouter.ai/api/v1/models (October 2026).
- * Actual billing always uses the cost OpenRouter reports per request;
- * these prices are only used to size the up-front budget reservation.
+ * Unified Public Display for Aura's Proprietary Intelligence Engine.
+ * The end user and client never see the underlying model identifiers.
  */
-export const MODELS: AIModel[] = [
-  {
-    id: 'anthropic/claude-haiku-5.5',
-    label: 'Claude Haiku 5.5',
-    provider: 'anthropic',
-    description: 'Very fast and cheap, good at code.',
-    inputPerM: 0.1,
-    outputPerM: 0.5,
-    minPlan: 'free',
-    reasoningEffort: 'low',
-    badge: 'Fast',
-  },
-  {
-    id: 'openai/gpt-6-luna',
-    label: 'GPT-6 Luna',
-    provider: 'openai',
-    description: 'Lightweight OpenAI model for quick iterations.',
-    inputPerM: 0.1,
-    outputPerM: 0.5,
-    minPlan: 'free',
-    reasoningEffort: 'low',
-  },
-  {
-    id: 'google/gemini-3.5-flash-lite',
-    label: 'Gemini 3.5 Flash Lite',
-    provider: 'google',
-    description: 'Low-latency Gemini for simple apps.',
-    inputPerM: 0.3,
-    outputPerM: 2.5,
-    minPlan: 'starter',
-    reasoningEffort: 'low',
-  },
-  {
-    id: 'google/gemini-3.8-flash',
-    label: 'Gemini 3.8 Flash',
-    provider: 'google',
-    description: 'Latest Gemini Flash, strong visual design.',
-    inputPerM: 0.75,
-    outputPerM: 3.75,
-    minPlan: 'starter',
-    reasoningEffort: 'low',
-  },
-  {
-    id: 'anthropic/claude-sonnet-5.5',
-    label: 'Claude Sonnet 5.5',
-    provider: 'anthropic',
-    description: 'Best balance of quality and speed for apps.',
-    inputPerM: 2,
-    outputPerM: 10,
-    minPlan: 'mid',
-    reasoningEffort: 'low',
-    badge: 'Best for apps',
-  },
-  {
-    id: 'openai/gpt-6.1-sol',
-    label: 'GPT-6.1 Sol',
-    provider: 'openai',
-    description: 'OpenAI flagship, great reasoning and UI.',
-    inputPerM: 2,
-    outputPerM: 10,
-    minPlan: 'mid',
-    reasoningEffort: 'low',
-  },
-  {
-    id: 'google/gemini-3.1-pro-preview',
-    label: 'Gemini 3.1 Pro',
-    provider: 'google',
-    description: 'Google flagship with huge context.',
-    inputPerM: 2,
-    outputPerM: 12,
-    minPlan: 'mid',
-    reasoningEffort: 'low',
-  },
-  {
-    id: 'anthropic/claude-opus-5.5',
-    label: 'Claude Opus 5.5',
-    provider: 'anthropic',
-    description: 'Most capable model for complex apps.',
-    inputPerM: 4,
-    outputPerM: 20,
-    minPlan: 'pro',
-    reasoningEffort: 'medium',
-    badge: 'Most capable',
-  },
-];
-
-export const DEFAULT_MODEL_ID = 'anthropic/claude-haiku-5.5';
-
-export const PROVIDER_LABEL: Record<Provider, string> = {
-  anthropic: 'Anthropic',
-  openai: 'OpenAI',
-  google: 'Google',
+export const AURA_ENGINE_DISPLAY = {
+  name: 'Aura Autonomous Engine',
+  version: 'v2.5 Pro',
+  tagline: 'Deep Architectural Reasoning & Full-Stack Synthesis',
+  badge: 'Autonomous',
 };
 
-export function getModel(id: string | null | undefined): AIModel | undefined {
-  return MODELS.find((m) => m.id === id);
+/**
+ * Internal routing pool.
+ * Backend dynamically routes user requests to the highest-fidelity frontier model
+ * available for their tier, with automatic failover and budget preservation.
+ */
+export const INTERNAL_MODELS: Record<PlanId, InternalAIModel> = {
+  free: {
+    id: 'nvidia/nemotron-3-ultra-550b-a55b',
+    internalLabel: 'Nemotron 3 Ultra',
+    description: 'High-speed autonomous UI synthesis with deep reasoning.',
+    inputPerM: 0.6,
+    outputPerM: 2.4,
+    minPlan: 'free',
+    maxTokens: 8000,
+  },
+  starter: {
+    id: 'nvidia/nemotron-3-ultra-550b-a55b',
+    internalLabel: 'Nemotron 3 Ultra',
+    description: 'Advanced full-stack synthesis with full state persistence.',
+    inputPerM: 0.6,
+    outputPerM: 2.4,
+    minPlan: 'starter',
+    maxTokens: 12000,
+  },
+  mid: {
+    id: 'anthropic/claude-sonnet-5.5',
+    internalLabel: 'Claude Sonnet 5.5',
+    description: 'Flagship reasoning for complex multi-view applications.',
+    inputPerM: 2.0,
+    outputPerM: 10.0,
+    minPlan: 'mid',
+    maxTokens: 16000,
+  },
+  pro: {
+    id: 'anthropic/claude-opus-5.5',
+    internalLabel: 'Claude Opus 5.5',
+    description: 'Premier frontier reasoning for enterprise full-stack systems.',
+    inputPerM: 4.0,
+    outputPerM: 20.0,
+    minPlan: 'pro',
+    maxTokens: 20000,
+  },
+};
+
+/** Backward compatibility alias */
+export type AIModel = InternalAIModel;
+
+/**
+ * Resolves the internal model configuration based on the user's active tier.
+ * Keeps the underlying model completely hidden from external visibility.
+ */
+export function resolveBackendModel(plan: PlanId = 'free'): InternalAIModel {
+  return INTERNAL_MODELS[plan] || INTERNAL_MODELS.free;
 }
 
-export function canUseModel(plan: PlanId, model: AIModel): boolean {
+export function canUseModel(plan: PlanId, model: InternalAIModel): boolean {
   return PLAN_RANK[plan] >= PLAN_RANK[model.minPlan];
 }
 
-/** The best model a plan can use — used as the default selection. */
-export function bestModelFor(plan: PlanId): AIModel {
-  const preferred: Record<PlanId, string> = {
-    free: 'anthropic/claude-haiku-5.5',
-    starter: 'google/gemini-3.8-flash',
-    mid: 'anthropic/claude-sonnet-5.5',
-    pro: 'anthropic/claude-sonnet-5.5',
-  };
-  return getModel(preferred[plan]) ?? MODELS[0];
+/** Legacy lookup helper safely returning fallback internal model */
+export function getModel(id?: string | null): InternalAIModel {
+  if (id && id in INTERNAL_MODELS) {
+    return INTERNAL_MODELS[id as PlanId];
+  }
+  return INTERNAL_MODELS.starter;
 }

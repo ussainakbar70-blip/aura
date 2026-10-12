@@ -42,7 +42,7 @@ export function SettingsModal({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Platform Settings</h2>
-              <p className="text-xs text-zinc-400">OpenRouter BYOK & Cashfree telemetry</p>
+              <p className="text-xs text-zinc-400">Compute Key & Cashfree telemetry</p>
             </div>
           </div>
           <button
@@ -53,22 +53,13 @@ export function SettingsModal({
           </button>
         </div>
 
-        {/* Section 1: OpenRouter BYOK */}
+        {/* Section 1: Custom Compute Key BYOK */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5 text-amber-400" />
-              <span>OpenRouter API Key (Optional BYOK)</span>
+              <span>Dedicated Compute Key (Optional BYOK)</span>
             </label>
-            <a
-              href="https://openrouter.ai/keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] text-amber-400 hover:underline flex items-center gap-1"
-            >
-              <span>Get API Key</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </a>
           </div>
 
           <div className="space-y-2">
@@ -76,11 +67,11 @@ export function SettingsModal({
               type="password"
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="sk-or-v1-..."
+              placeholder="sk-..."
               className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500/60 font-mono"
             />
             <p className="text-[11px] text-zinc-500">
-              Leave blank to use the server-configured OpenRouter key. Entering your own key routes prompts directly through your personal OpenRouter account.
+              Leave blank to use Aura&#39;s server-managed GPU infrastructure. Entering a custom key routes generation prompts through your personal endpoint.
             </p>
           </div>
 

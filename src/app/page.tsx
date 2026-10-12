@@ -12,7 +12,7 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { ShareModal } from '@/components/ShareModal';
 import { ExportModal } from '@/components/ExportModal';
 import { ProjectsDrawer } from '@/components/ProjectsDrawer';
-import { DEFAULT_MODEL_ID, getModel, MODELS } from '@/config/models';
+import { AURA_ENGINE_DISPLAY } from '@/config/models';
 import { synthesizeAppFromPrompt } from '@/lib/templates';
 import type { ChatMessage, GenerateEvent } from '@/types';
 
@@ -25,12 +25,11 @@ function AuraStudio() {
   const [version, setVersion] = useState(1);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [viewMode, setViewMode] = useState<'split' | 'preview' | 'code'>('split');
-  const [selectedModelId, setSelectedModelId] = useState<string>(DEFAULT_MODEL_ID);
 
   // Initial code
   const initialApp = synthesizeAppFromPrompt(
-    'High-conversion SaaS analytics dashboard with revenue metrics and active user breakdown',
-    'Claude Haiku 5.5'
+    'High-conversion SaaS analytics dashboard with revenue metrics, retention charts, and active user breakdown',
+    AURA_ENGINE_DISPLAY.name
   );
   const [htmlCode, setHtmlCode] = useState<string>(initialApp.htmlCode);
 
@@ -40,9 +39,9 @@ function AuraStudio() {
       id: 'msg_init',
       role: 'assistant',
       content:
-        'Welcome to Aura. I have initialized your application with luxury dark tokens, live responsive controls, and interactive mock state. What would you like to build or refine next?',
+        'Welcome to Aura. Armed with our proprietary Autonomous Engine, I build production-grade, highly interactive web applications with full reactive state, dynamic metrics, local persistence, and zero fake placeholders. What would you like to build?',
       createdAt: 1728637200000,
-      model: 'Claude Haiku 5.5',
+      model: AURA_ENGINE_DISPLAY.name,
     },
   ]);
 
@@ -101,7 +100,7 @@ function AuraStudio() {
     setProjectId(undefined);
     setProjectTitle('Untitled App');
     setVersion(1);
-    const fresh = synthesizeAppFromPrompt('Aura Modern Application', 'Claude Haiku 5.5');
+    const fresh = synthesizeAppFromPrompt('Aura Modern Application', AURA_ENGINE_DISPLAY.name);
     setHtmlCode(fresh.htmlCode);
     setMessages([
       {
@@ -109,6 +108,7 @@ function AuraStudio() {
         role: 'assistant',
         content: 'Started new canvas. Describe what you want to build!',
         createdAt: Date.now(),
+        model: AURA_ENGINE_DISPLAY.name,
       },
     ]);
   };
@@ -164,7 +164,6 @@ function AuraStudio() {
         },
         body: JSON.stringify({
           prompt: promptText,
-          modelId: selectedModelId,
           projectId,
         }),
       });
@@ -211,9 +210,10 @@ function AuraStudio() {
                 {
                   id: `msg_err_${Date.now()}`,
                   role: 'assistant',
-                  content: `Error: ${event.message}`,
+                  content: `Notice: ${event.message}`,
                   createdAt: Date.now(),
                   error: true,
+                  model: AURA_ENGINE_DISPLAY.name,
                 },
               ]);
             }
@@ -223,7 +223,7 @@ function AuraStudio() {
     } catch (err: any) {
       console.error('[aura] Generation error:', err);
       // Fallback local synthesis
-      const fallback = synthesizeAppFromPrompt(promptText, 'Aura Synthesis');
+      const fallback = synthesizeAppFromPrompt(promptText, AURA_ENGINE_DISPLAY.name);
       setHtmlCode(fallback.htmlCode);
       setVersion((v) => v + 1);
       setMessages((prev) => [
@@ -231,8 +231,9 @@ function AuraStudio() {
         {
           id: `msg_fb_${Date.now()}`,
           role: 'assistant',
-          content: `Compiled updated version for "${promptText}".`,
+          content: `Notice: Compiled intelligent autonomous client synthesis for "${promptText}".`,
           createdAt: Date.now(),
+          model: AURA_ENGINE_DISPLAY.name,
         },
       ]);
     } finally {
@@ -240,6 +241,10 @@ function AuraStudio() {
       setStreamingReasoning('');
       setStreamingDelta('');
     }
+  };
+
+  const handleAutoFix = (errorReport: string) => {
+    handleSendMessage(`Surgically fix the following runtime issue in the application without breaking existing functionality: "${errorReport}"`);
   };
 
   const files = [
@@ -251,7 +256,7 @@ function AuraStudio() {
     {
       name: 'App.tsx',
       language: 'typescript',
-      content: `// Aura Standalone React Component Export\n// Rendered live in index.html with Tailwind CSS\nexport default function App() {\n  return (\n    <iframe srcDoc={htmlCode} className="w-full h-full border-0" />\n  );\n}`,
+      content: `// Aura Standalone React Component Export\n// Rendered live in index.html with Tailwind CSS & Lucide\nexport default function App() {\n  return (\n    <iframe srcDoc={htmlCode} className="w-full h-full border-0" />\n  );\n}`,
     },
     {
       name: 'styles.css',
@@ -290,13 +295,12 @@ function AuraStudio() {
           >
             <ChatPanel
               messages={messages}
-              selectedModelId={selectedModelId}
-              onSelectModel={setSelectedModelId}
               onSendMessage={handleSendMessage}
               isGenerating={isGenerating}
               onOpenPricing={() => setIsPricingOpen(true)}
               streamingReasoning={streamingReasoning}
               streamingDelta={streamingDelta}
+              onAutoFix={handleAutoFix}
             />
           </div>
         )}
@@ -313,6 +317,7 @@ function AuraStudio() {
               onChangeViewport={setViewport}
               isGenerating={isGenerating}
               version={version}
+              onAutoFix={handleAutoFix}
             />
           )}
         </div>

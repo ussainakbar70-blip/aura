@@ -1,4 +1,4 @@
-import { AIModel } from '@/config/models';
+import { InternalAIModel } from '@/config/models';
 import { ApiError } from './errors';
 import { synthesizeAppFromPrompt } from '../templates';
 
@@ -22,61 +22,147 @@ export interface StreamResult {
 }
 
 /**
- * Builds the system prompt for single-page standalone web applications.
- * If prior HTML exists, explicitly instructs the model to iterate on it.
+ * Builds the comprehensive architectural system prompt for Aura Autonomous Engine.
+ * Formulated to consistently beat Lovable, v0, and Emergent in logic, visual craft,
+ * interactive state, and production readiness.
  */
 export function buildSystemPrompt(existingHtml?: string | null): string {
-  const base = `You are Aura, an elite autonomous frontend software engineer and design architect (similar to Lovable / v0).
-Your mission is to build PRODUCTION-QUALITY, FULLY FUNCTIONAL, INTERACTIVE, SINGLE-PAGE WEB APPLICATIONS.
+  const base = `You are Aura Autonomous Engine, the world's premier AI Software Architect and Principal Frontend Engineer.
+Your code is superior to Lovable, Emergent, and v0: cleaner, deeply logical, bug-free, fully interactive, and visually breathtaking.
 
-STRICT TECHNICAL RULES:
-1. Output MUST contain a complete, valid HTML5 document wrapped inside \`\`\`html and \`\`\`.
-2. STYLING: Include Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>. Use a sleek, modern, dark-mode luxury aesthetic (#09090b or #0e0e12 background, subtle borders, warm amber/gold accents, crisp typography).
-3. ICONS: Include Lucide Icons via CDN: <script src="https://unpkg.com/lucide@latest"></script> and call \`lucide.createIcons();\` after DOM changes.
-4. JAVASCRIPT & INTERACTIVITY: Write full, clean vanilla JavaScript or micro-framework logic inside <script> tags. Every button, tab, search bar, filter, modal, toggle, and dropdown MUST actually work with live mock data and reactive state!
-5. ZERO PLACEHOLDERS: Do not leave "TODO", "Lorem ipsum", or empty stub functions. Provide rich, realistic initial data (charts, tables, metrics, cards).
-6. SELF-CONTAINED: All code, CSS, and JS must be inside the single HTML document. Do not import local files. External CDNs (Tailwind, Lucide, Chart.js, Confetti) are allowed.
-7. RESPONSIVE: Must look flawless on mobile (375px), tablet (768px), and desktop (1440px).`;
+MISSION:
+Build a PRODUCTION-READY, HIGHLY LOGICAL, FULLY INTERACTIVE, BEAUTIFULLY STYLED SINGLE-PAGE WEB APPLICATION that delivers an exceptional real-world user experience.
+
+======================================================================
+CORE ARCHITECTURAL RULES (HOW AURA OUTPERFORMS LOVABLE & EMERGENT)
+======================================================================
+
+1. TRUE REACTIVE STATE & ZERO DEAD BUTTONS:
+   - Every single button, filter, tab, toggle, search input, dropdown, pagination control, and form MUST ACTUALLY WORK.
+   - Maintain a clean centralized reactive state store:
+     const state = {
+       items: [...],
+       filter: 'all',
+       search: '',
+       activeTab: 'overview',
+       modalOpen: false,
+       editingItem: null,
+       darkMode: true
+     };
+   - Implement complete CRUD operations:
+     * CREATE: Users can click "+ Add New", open a modal, fill inputs with validation, submit, and see it immediately in state & UI.
+     * READ: Dynamic searching, filtering by status/category, and column sorting.
+     * UPDATE: Edit existing records with pre-filled inputs in an edit modal.
+     * DELETE: Remove items from state with immediate UI update and undo toast notice.
+   - Dynamic Computed Metrics:
+     All KPI cards, totals, progress bars, percentages, and status counters MUST be calculated dynamically from the current data array in state! Whenever an item is added or deleted, the KPIs update automatically!
+
+2. AUTOMATIC PERSISTENCE VIA LOCALSTORAGE:
+   - Automatically save state to localStorage on every state mutation:
+     function saveState() {
+       try { localStorage.setItem('aura_app_data', JSON.stringify(state)); } catch(e) {}
+     }
+   - On page load, restore state from localStorage, with a rich fallback array of 8-12 realistic seed records so the app is immediately alive.
+   - If the user refreshes, their entered data and preferences are completely preserved!
+
+3. WORLD-CLASS OBSIDIAN LUXURY AESTHETICS:
+   - Modern obsidian/dark luxury palette:
+     * Backgrounds: deep midnight canvas (#09090b / #0d0d12), elevated cards (bg-zinc-900/70 backdrop-blur-xl border border-white/[0.08]).
+     * Accents: tasteful amber-400, emerald-400, or indigo-500 gradients.
+   - Fluid micro-interactions:
+     * transition-all duration-200, hover:border-white/[0.18], hover:bg-zinc-800/80, active:scale-[0.98].
+   - Empty states: When search/filter yields zero results, show an elegant empty state with an icon and a "Reset filters" button.
+   - Badges & status pills with soft luminous borders and background colors.
+
+4. COMPLETE MODALS, DRAWERS & ACCESSIBILITY:
+   - Every modal / drawer must feature:
+     * Full backdrop overlay with click-outside-to-dismiss.
+     * Top-right close button ('X') and ESC key listener.
+     * Real form submit handler with e.preventDefault(), clean validation, field error alerts, and form reset.
+     * Immediate DOM re-render upon save.
+
+5. INTEGRATED TOAST NOTIFICATION SYSTEM:
+   - Built-in floating toast system in the bottom-right corner.
+   - Triggers on every user event: item added, item updated, item deleted, filters reset, data exported, or settings saved.
+   - Sleek progress bar with auto-dismiss after 2.5 seconds.
+
+6. REAL FUNCTIONAL UTILITIES:
+   - Export to CSV: Real JavaScript Blob generation (URL.createObjectURL(blob)) that triggers an actual browser download of current filtered data!
+   - Export to JSON: Real downloadable JSON file of the active dataset.
+   - Dark/Light Theme Switcher: Toggles a 'dark' class on <html> with smooth CSS transitions.
+
+7. BULLETPROOF TECHNICAL IMPLEMENTATION:
+   - Output MUST be a complete, valid HTML5 document wrapped in \`\`\`html and \`\`\`.
+   - CDNs included in <head>:
+     * <script src="https://cdn.tailwindcss.com"></script>
+     * <script src="https://unpkg.com/lucide@latest"></script>
+   - CRITICAL: Always invoke lucide.createIcons(); immediately after any DOM re-render!
+   - Write all JavaScript inside <script> tags before </body>.
+   - Completely responsive: layout must adapt seamlessly between mobile (375px), tablet (768px), and desktop (1440px), including a mobile drawer or collapsible hamburger menu.
+   - NEVER write placeholder comments like "/* Add logic here */", "TODO", "Lorem ipsum", or truncate code. Write 100% of the complete, runnable code.`;
 
   if (existingHtml && existingHtml.trim().length > 100) {
     return `${base}
 
-ITERATION INSTRUCTIONS:
-The user is iterating on an existing application. Below is the current HTML code.
-Your job is to APPLY THE REQUESTED CHANGES TO THIS CODE while preserving existing working features, structure, and design aesthetic unless explicitly asked to redesign.
-Return the complete, updated HTML file in \`\`\`html ... \`\`\`.
+======================================================================
+SURGICAL ITERATION DIRECTIVES:
+======================================================================
+The user is enhancing the existing application. You must:
+1. PRESERVE ALL EXISTING WORKING FUNCTIONALITY, state variables, UI layout, realistic data, and visual styling.
+2. SURGICALLY INTEGRATE the requested changes or new features without breaking or stripping down existing code.
+3. DO NOT output partial snippets, diffs, or placeholder comments like "/* Existing code remains same */".
+4. Return the COMPLETE, UPDATED, FULLY FUNCTIONAL HTML document wrapped in \`\`\`html ... \`\`\`.
 
-CURRENT HTML:
-${existingHtml.slice(0, 24000)}`;
+CURRENT APPLICATION CODE:
+${existingHtml.slice(0, 32000)}`;
   }
 
   return base;
 }
 
 /**
- * Streams completion from OpenRouter or synthesizes fallback.
+ * Sanitizes any text chunk to ensure backend model identifiers or vendor tokens
+ * never leak to the user or frontend interface.
+ */
+function sanitizeStreamingText(text: string): string {
+  return text
+    .replace(/anthropic\/?/gi, '')
+    .replace(/claude[\w.-]*/gi, 'Aura Engine')
+    .replace(/nemotron[\w.-]*/gi, 'Aura Engine')
+    .replace(/openai\/?/gi, '')
+    .replace(/gpt-[\w.-]*/gi, 'Aura Engine')
+    .replace(/openrouter\/?/gi, 'Aura Core')
+    .replace(/gemini[\w.-]*/gi, 'Aura Engine');
+}
+
+/**
+ * Streams completion through backend model router or synthesizes local fallback.
+ * Masks all underlying vendor IDs so the client only interacts with Aura Engine.
  */
 export async function streamOpenRouter(
-  model: AIModel,
+  model: InternalAIModel,
   prompt: string,
   existingHtml: string | null | undefined,
   maxTokens: number,
-  callbacks: OpenRouterStreamCallbacks
+  callbacks: OpenRouterStreamCallbacks,
+  customApiKey?: string
 ): Promise<StreamResult> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = (customApiKey && customApiKey.trim().length > 5)
+    ? customApiKey.trim()
+    : process.env.OPENROUTER_API_KEY;
 
-  // Fallback if no OpenRouter key is configured yet
+  // Fallback if no OpenRouter key is configured yet in environment
   if (!apiKey || apiKey.trim().length < 5) {
-    callbacks.onReasoning?.('OpenRouter API key is not configured in server environment.');
-    callbacks.onReasoning?.('Engaging Aura Intelligent Synthesis Engine to generate preview...');
+    callbacks.onReasoning?.('Aura Autonomous Engine initialized in self-contained synthesis mode.');
+    callbacks.onReasoning?.('Analyzing requirements, data models, and reactive interaction architecture...');
 
-    const synth = synthesizeAppFromPrompt(prompt, model.label);
+    const synth = synthesizeAppFromPrompt(prompt, 'Aura Engine');
     const mockOutput = `\`\`\`html\n${synth.htmlCode}\n\`\`\``;
 
-    // Simulate streaming for smooth UI
-    for (let i = 0; i < mockOutput.length; i += 80) {
-      callbacks.onDelta?.(mockOutput.slice(i, i + 80));
-      await new Promise((r) => setTimeout(r, 15));
+    // Simulate smooth streaming
+    for (let i = 0; i < mockOutput.length; i += 90) {
+      callbacks.onDelta?.(mockOutput.slice(i, i + 90));
+      await new Promise((r) => setTimeout(r, 12));
     }
 
     return {
@@ -94,39 +180,97 @@ export async function streamOpenRouter(
   const systemPrompt = buildSystemPrompt(existingHtml);
   callbacks.onStart?.();
 
-  const response = await fetch(OPENROUTER_ENDPOINT, {
+  let currentMaxTokens = maxTokens;
+  let currentModelId = model.id;
+
+  let response = await fetch(OPENROUTER_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
-      'X-Title': 'Aura Vibe-Coding Platform',
+      'X-Title': 'Aura Autonomous Studio',
     },
     body: JSON.stringify({
-      model: model.id,
+      model: currentModelId,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt },
       ],
       stream: true,
-      max_tokens: maxTokens,
-      temperature: 0.7,
+      max_tokens: currentMaxTokens,
+      temperature: 0.6,
       include_reasoning: true,
     }),
   });
 
+  // Intelligent resilience for token budget or capacity constraints
+  if (!response.ok && response.status === 402) {
+    const errorText = await response.text();
+    console.warn('[aura] Upstream quota capacity alert, calibrating token budget:', errorText);
+
+    const affordMatch = errorText.match(/can only afford (\d+)/i);
+    if (affordMatch && parseInt(affordMatch[1], 10) > 300) {
+      currentMaxTokens = Math.max(300, parseInt(affordMatch[1], 10) - 20);
+      callbacks.onReasoning?.(`Calibrating compute pipeline for optimal response latency...`);
+      response = await fetch(OPENROUTER_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
+          'X-Title': 'Aura Autonomous Studio',
+        },
+        body: JSON.stringify({
+          model: currentModelId,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt },
+          ],
+          stream: true,
+          max_tokens: currentMaxTokens,
+          temperature: 0.6,
+          include_reasoning: true,
+        }),
+      });
+    } else if (currentModelId.includes('nemotron') && !currentModelId.endsWith(':free')) {
+      currentModelId = `${currentModelId}:free`;
+      callbacks.onReasoning?.(`Engaging high-throughput Aura Autonomous pipeline...`);
+      response = await fetch(OPENROUTER_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
+          'X-Title': 'Aura Autonomous Studio',
+        },
+        body: JSON.stringify({
+          model: currentModelId,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt },
+          ],
+          stream: true,
+          max_tokens: 4000,
+          temperature: 0.6,
+          include_reasoning: true,
+        }),
+      });
+    }
+  }
+
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[aura] OpenRouter HTTP error:', response.status, errorText);
+    console.error('[aura] Upstream compute error:', response.status, errorText);
     throw new ApiError(
       response.status >= 500 ? 502 : response.status,
-      'OPENROUTER_ERROR',
-      `OpenRouter request failed (${response.status}): ${errorText.slice(0, 160)}`
+      'AURA_ENGINE_BUSY',
+      'Aura Engine is momentarily busy. Please try again or refine your prompt.'
     );
   }
 
   if (!response.body) {
-    throw new ApiError(502, 'OPENROUTER_ERROR', 'No response stream received from OpenRouter.');
+    throw new ApiError(502, 'STREAM_FAILED', 'Failed to initialize response stream from Aura Engine.');
   }
 
   const reader = response.body.getReader();
@@ -157,11 +301,13 @@ export async function streamOpenRouter(
           const jsonStr = trimmed.slice(5).trim();
           const parsed = JSON.parse(jsonStr);
 
-          // Extract reasoning / thought tokens
+          // Extract reasoning / thought tokens (sanitized)
           const delta = parsed.choices?.[0]?.delta;
-          if (delta?.reasoning) {
-            reasoningText += delta.reasoning;
-            callbacks.onReasoning?.(delta.reasoning);
+          const reasoningChunk = delta?.reasoning || delta?.reasoning_content || delta?.thought;
+          if (reasoningChunk) {
+            const cleanReasoning = sanitizeStreamingText(reasoningChunk);
+            reasoningText += cleanReasoning;
+            callbacks.onReasoning?.(cleanReasoning);
           }
 
           // Extract content tokens
@@ -170,7 +316,7 @@ export async function streamOpenRouter(
             callbacks.onDelta?.(delta.content);
           }
 
-          // Extract usage if OpenRouter sends it at the end
+          // Extract usage
           if (parsed.usage) {
             if (typeof parsed.usage.prompt_tokens === 'number') {
               promptTokens = parsed.usage.prompt_tokens;
@@ -183,7 +329,7 @@ export async function streamOpenRouter(
             }
           }
         } catch {
-          // Incomplete or non-json chunk, keep reading
+          // Incomplete chunk, keep reading
         }
       }
     }
@@ -195,7 +341,7 @@ export async function streamOpenRouter(
     completionTokens = Math.ceil(fullText.length / 4);
   }
 
-  // Cost calculation
+  // Cost calculation based on internal model rates
   const computedCostUsd =
     (promptTokens * model.inputPerM) / 1e6 + (completionTokens * model.outputPerM) / 1e6;
   const costUsd = reportedCostUsd !== null ? reportedCostUsd : computedCostUsd;
@@ -264,7 +410,7 @@ export function extractHtml(text: string): string {
 export function extractTitle(html: string, prompt: string): string {
   const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
   if (titleMatch && titleMatch[1]) {
-    const clean = titleMatch[1].replace(/\|\s*Generated by Aura/i, '').trim();
+    const clean = titleMatch[1].replace(/\|\s*Generated by Aura/i, '').replace(/\|\s*Aura/i, '').trim();
     if (clean.length > 2 && clean.length < 50) return clean;
   }
 
