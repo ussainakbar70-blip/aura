@@ -221,9 +221,9 @@ export function PricingModal({ isOpen, onClose, onOpenAuth }: PricingModalProps)
                       </div>
 
                       <div className="flex items-center justify-between text-zinc-300">
-                        <span className="text-zinc-400">Target Profit Margin:</span>
-                        <span className="font-mono text-zinc-400">
-                          ~${plan.targetMarginUSD}/month
+                        <span className="text-zinc-400">Max Output Capacity:</span>
+                        <span className="font-mono text-zinc-300">
+                          {(plan.maxOutputTokens / 1000).toFixed(0)}k tokens / build
                         </span>
                       </div>
                     </div>

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
   Monitor, Tablet, Smartphone, Code, Eye, Columns, Share2, 
-  Download, Settings, User, LogOut, Zap, History, FolderKanban
+  Download, Settings, User, LogOut, Zap, History, FolderKanban, Home
 } from 'lucide-react';
 import { AuraLogo } from './AuraLogo';
 import { useAuth } from '@/lib/client/auth-context';
@@ -61,9 +62,17 @@ export function Navbar({
 
   return (
     <header className="h-14 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md px-4 flex items-center justify-between z-30 select-none">
-      {/* Left: Brand + Project Drawer + Project Title */}
-      <div className="flex items-center gap-3.5">
-        <AuraLogo size="sm" showSubtitle={false} />
+      {/* Left: Brand + Home + Project Drawer + Project Title */}
+      <div className="flex items-center gap-3">
+        <AuraLogo size="sm" showSubtitle={false} href="/" />
+
+        <Link
+          href="/"
+          className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+          title="Return to Landing Page"
+        >
+          <Home className="w-3.5 h-3.5" />
+        </Link>
 
         <div className="h-4 w-[1px] bg-zinc-800" />
 
@@ -243,6 +252,15 @@ export function Navbar({
                     <p className="text-[10px] text-amber-400 font-mono mt-1 font-semibold">{planName} Plan</p>
                   </div>
 
+                  <Link
+                    href="/"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full px-3 py-2 text-left rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 flex items-center gap-2"
+                  >
+                    <Home className="w-3.5 h-3.5" />
+                    <span>Landing Page</span>
+                  </Link>
+
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
@@ -269,13 +287,21 @@ export function Navbar({
             )}
           </div>
         ) : (
-          <button
-            onClick={onOpenAuth}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-900 border border-zinc-700 text-zinc-200 hover:text-white hover:border-zinc-500 transition-all flex items-center gap-1.5"
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Sign In</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-900 border border-zinc-700 text-zinc-200 hover:text-white hover:border-zinc-500 transition-all flex items-center gap-1.5"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </Link>
+            <Link
+              href="/signup"
+              className="hidden sm:inline-flex px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-black transition-all shadow-sm"
+            >
+              Sign Up
+            </Link>
+          </div>
         )}
       </div>
     </header>

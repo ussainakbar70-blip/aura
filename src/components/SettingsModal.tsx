@@ -7,8 +7,10 @@ import { useAuth } from '@/lib/client/auth-context';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  openRouterKey: string;
-  onSaveOpenRouterKey: (key: string) => void;
+  computeKey?: string;
+  openRouterKey?: string;
+  onSaveComputeKey?: (key: string) => void;
+  onSaveOpenRouterKey?: (key: string) => void;
   subscription?: any;
   onResetUsage?: () => void;
 }
@@ -16,17 +18,22 @@ interface SettingsModalProps {
 export function SettingsModal({
   isOpen,
   onClose,
+  computeKey,
   openRouterKey,
+  onSaveComputeKey,
   onSaveOpenRouterKey,
 }: SettingsModalProps) {
   const { account, refreshAccount, isConfigured } = useAuth();
-  const [keyInput, setKeyInput] = useState(openRouterKey);
+  const initialKey = computeKey ?? openRouterKey ?? '';
+  const [keyInput, setKeyInput] = useState(initialKey);
   const [savedFeedback, setSavedFeedback] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    onSaveOpenRouterKey(keyInput.trim());
+    const trimmed = keyInput.trim();
+    if (onSaveComputeKey) onSaveComputeKey(trimmed);
+    if (onSaveOpenRouterKey) onSaveOpenRouterKey(trimmed);
     setSavedFeedback(true);
     setTimeout(() => setSavedFeedback(false), 2000);
   };
@@ -106,12 +113,12 @@ export function SettingsModal({
 
           <div className="grid grid-cols-2 gap-2 text-[11px] text-zinc-400 font-mono pt-1">
             <div>
-              <span className="text-zinc-600 block text-[10px]">App ID:</span>
-              <span className="text-zinc-300 truncate block">12952519...5921</span>
+              <span className="text-zinc-600 block text-[10px]">Encryption & Webhook:</span>
+              <span className="text-zinc-300 truncate block">HMAC-SHA256 Verified</span>
             </div>
             <div>
-              <span className="text-zinc-600 block text-[10px]">Secret Key:</span>
-              <span className="text-zinc-300 truncate block">••••••••••••••••</span>
+              <span className="text-zinc-600 block text-[10px]">Supported Methods:</span>
+              <span className="text-zinc-300 truncate block">UPI, Cards & NetBanking</span>
             </div>
           </div>
         </div>

@@ -1,12 +1,19 @@
 import React from 'react';
+import Link from 'next/link';
 
 interface AuraLogoProps {
   size?: 'sm' | 'md' | 'lg';
   showSubtitle?: boolean;
   className?: string;
+  href?: string;
 }
 
-export function AuraLogo({ size = 'md', showSubtitle = false, className = '' }: AuraLogoProps) {
+export function AuraLogo({
+  size = 'md',
+  showSubtitle = false,
+  className = '',
+  href,
+}: AuraLogoProps) {
   const sizeConfig = {
     sm: {
       mark: 'w-7 h-7 text-[10px]',
@@ -31,11 +38,11 @@ export function AuraLogo({ size = 'md', showSubtitle = false, className = '' }: 
     },
   }[size];
 
-  return (
+  const content = (
     <div className={`flex items-center ${sizeConfig.gap} select-none ${className}`}>
       {/* Brand Mark: White background mixed with mild sandal (warm ivory/sandalwood) */}
       <div
-        className={`${sizeConfig.mark} ${sizeConfig.radius} flex items-center justify-center font-black relative overflow-hidden shadow-sm border border-[#E9DFCF]`}
+        className={`${sizeConfig.mark} ${sizeConfig.radius} flex items-center justify-center font-black relative overflow-hidden shadow-sm border border-[#E9DFCF] shrink-0 transition-transform hover:scale-105`}
         style={{
           background: 'linear-gradient(135deg, #FFFFFF 0%, #FAF5EC 50%, #F1E5D1 100%)',
         }}
@@ -70,4 +77,14 @@ export function AuraLogo({ size = 'md', showSubtitle = false, className = '' }: 
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="inline-flex items-center group">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

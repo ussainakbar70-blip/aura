@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const customApiKey = req.headers.get('x-openrouter-key') || undefined;
+    const customApiKey = req.headers.get('x-compute-key') || req.headers.get('x-openrouter-key') || undefined;
 
     // Estimate input tokens for reservation
     const inputTokenEstimate = Math.ceil(

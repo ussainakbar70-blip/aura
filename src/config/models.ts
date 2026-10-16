@@ -17,52 +17,59 @@ export interface InternalAIModel {
  */
 export const AURA_ENGINE_DISPLAY = {
   name: 'Aura Autonomous Engine',
-  version: 'v2.5 Pro',
+  version: 'v2.5 Ultra',
   tagline: 'Deep Architectural Reasoning & Full-Stack Synthesis',
   badge: 'Autonomous',
 };
 
 /**
+ * Foundational Engine: Nemotron 3 Ultra (550B MoE, 55B active, hybrid Transformer-Mamba).
+ * Completely stealth routing with zero identity disclosure to client or user.
+ */
+export const PRIMARY_AUTONOMOUS_MODEL_ID = 'nvidia/nemotron-3-ultra-550b-a55b';
+export const FALLBACK_AUTONOMOUS_MODEL_ID = 'nvidia/nemotron-3-ultra-550b-a55b:free';
+
+/**
  * Internal routing pool.
- * Backend dynamically routes user requests to the highest-fidelity frontier model
- * available for their tier, with automatic failover and budget preservation.
+ * Backend dynamically routes user requests to Nemotron 3 Ultra compute pipelines
+ * scaled by tier token allocations, with automatic failover to high-throughput free route.
  */
 export const INTERNAL_MODELS: Record<PlanId, InternalAIModel> = {
   free: {
-    id: 'nvidia/nemotron-3-ultra-550b-a55b',
-    internalLabel: 'Nemotron 3 Ultra',
-    description: 'High-speed autonomous UI synthesis with deep reasoning.',
+    id: PRIMARY_AUTONOMOUS_MODEL_ID,
+    internalLabel: 'Aura Autonomous Engine (Core)',
+    description: 'High-speed autonomous UI synthesis with deep structural reasoning.',
     inputPerM: 0.6,
     outputPerM: 2.4,
     minPlan: 'free',
     maxTokens: 8000,
   },
   starter: {
-    id: 'nvidia/nemotron-3-ultra-550b-a55b',
-    internalLabel: 'Nemotron 3 Ultra',
-    description: 'Advanced full-stack synthesis with full state persistence.',
+    id: PRIMARY_AUTONOMOUS_MODEL_ID,
+    internalLabel: 'Aura Autonomous Engine (Plus)',
+    description: 'Advanced full-stack synthesis with full state persistence & CRUD.',
     inputPerM: 0.6,
     outputPerM: 2.4,
     minPlan: 'starter',
     maxTokens: 12000,
   },
   mid: {
-    id: 'anthropic/claude-sonnet-5.5',
-    internalLabel: 'Claude Sonnet 5.5',
-    description: 'Flagship reasoning for complex multi-view applications.',
-    inputPerM: 2.0,
-    outputPerM: 10.0,
+    id: PRIMARY_AUTONOMOUS_MODEL_ID,
+    internalLabel: 'Aura Autonomous Engine (Turbo)',
+    description: 'Flagship architectural reasoning for complex multi-view applications.',
+    inputPerM: 0.6,
+    outputPerM: 2.4,
     minPlan: 'mid',
     maxTokens: 16000,
   },
   pro: {
-    id: 'anthropic/claude-opus-5.5',
-    internalLabel: 'Claude Opus 5.5',
-    description: 'Premier frontier reasoning for enterprise full-stack systems.',
-    inputPerM: 4.0,
-    outputPerM: 20.0,
+    id: PRIMARY_AUTONOMOUS_MODEL_ID,
+    internalLabel: 'Aura Autonomous Engine (Ultra)',
+    description: 'Premier frontier reasoning for enterprise-grade autonomous systems.',
+    inputPerM: 0.6,
+    outputPerM: 2.4,
     minPlan: 'pro',
-    maxTokens: 20000,
+    maxTokens: 24000,
   },
 };
 

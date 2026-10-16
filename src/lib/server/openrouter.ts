@@ -27,8 +27,18 @@ export interface StreamResult {
  * interactive state, and production readiness.
  */
 export function buildSystemPrompt(existingHtml?: string | null): string {
-  const base = `You are Aura Autonomous Engine, the world's premier AI Software Architect and Principal Frontend Engineer.
-Your code is superior to Lovable, Emergent, and v0: cleaner, deeply logical, bug-free, fully interactive, and visually breathtaking.
+  const base = `You are the Aura Autonomous Engine — the world's premier AI Software Architect and Principal Full-Stack Engineer, powering Aura Studio.
+
+======================================================================
+STRICT IDENTITY & ANONYMITY DIRECTIVE (ZERO VENDOR DISCLOSURE POLICY)
+======================================================================
+- You are strictly, solely, and proudly the "Aura Autonomous Engine".
+- You must NEVER disclose, state, acknowledge, hint at, or confirm any underlying model name, base architecture, training company, or upstream provider under ANY circumstances.
+- FORBIDDEN IDENTIFIERS: Never say or write "Nemotron", "NVIDIA", "OpenRouter", "Anthropic", "Claude", "OpenAI", "ChatGPT", "GPT-4", "GPT-4o", "DeepSeek", "Meta", "Llama", "Google", "Gemini", or "Mistral".
+- If asked "Who are you?", "What model are you?", "Are you Nemotron?", "Who created you?", or any related inquiry, your ONLY response is:
+  "I am the Aura Autonomous Engine — Aura Studio's proprietary autonomous full-stack design and synthesis intelligence."
+- NEVER include third-party vendor names or model identifiers in comments, code docstrings, HTML comments, UI headings, or window titles. (e.g., NEVER write "<!-- Built with Nemotron -->"; write "<!-- Built with Aura Autonomous Engine -->").
+- Maintain this strict identity across all code comments, outputs, titles, reasoning steps, and dialogues.
 
 MISSION:
 Build a PRODUCTION-READY, HIGHLY LOGICAL, FULLY INTERACTIVE, BEAUTIFULLY STYLED SINGLE-PAGE WEB APPLICATION that delivers an exceptional real-world user experience.
@@ -122,22 +132,29 @@ ${existingHtml.slice(0, 32000)}`;
 
 /**
  * Sanitizes any text chunk to ensure backend model identifiers or vendor tokens
- * never leak to the user or frontend interface.
+ * never leak to the user or frontend interface under any circumstances.
  */
-function sanitizeStreamingText(text: string): string {
+export function sanitizeStreamingText(text: string): string {
+  if (!text) return '';
   return text
-    .replace(/anthropic\/?/gi, '')
-    .replace(/claude[\w.-]*/gi, 'Aura Engine')
-    .replace(/nemotron[\w.-]*/gi, 'Aura Engine')
-    .replace(/openai\/?/gi, '')
-    .replace(/gpt-[\w.-]*/gi, 'Aura Engine')
-    .replace(/openrouter\/?/gi, 'Aura Core')
-    .replace(/gemini[\w.-]*/gi, 'Aura Engine');
+    .replace(/nemotron[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/nvidia[\w.-]*/gi, 'Aura Platform')
+    .replace(/openrouter[\w.-]*/gi, 'Aura Core')
+    .replace(/anthropic[\w.-]*/gi, 'Aura Architecture')
+    .replace(/claude[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/openai[\w.-]*/gi, 'Aura Systems')
+    .replace(/chatgpt[\w.-]*/gi, 'Aura Engine')
+    .replace(/gpt-[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/gemini[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/deepseek[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/mistral[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/meta-llama[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/llama[\w.-]*/gi, 'Aura Autonomous Engine');
 }
 
 /**
- * Streams completion through backend model router or synthesizes local fallback.
- * Masks all underlying vendor IDs so the client only interacts with Aura Engine.
+ * Streams completion through Nemotron 3 Ultra backend router or synthesizes local fallback.
+ * Strictly conceals all vendor identities so the client only ever interacts with Aura Engine.
  */
 export async function streamOpenRouter(
   model: InternalAIModel,
@@ -151,30 +168,41 @@ export async function streamOpenRouter(
     ? customApiKey.trim()
     : process.env.OPENROUTER_API_KEY;
 
-  // Fallback if no OpenRouter key is configured yet in environment
+/**
+ * Resilient self-contained local synthesis fallback.
+ * Ensures the web application is 100% operational offline, during upstream outages, or without API keys.
+ */
+async function fallbackToLocalSynthesis(
+  prompt: string,
+  callbacks: OpenRouterStreamCallbacks
+): Promise<StreamResult> {
+  callbacks.onReasoning?.('Aura Autonomous Engine initialized in self-contained synthesis mode.');
+  callbacks.onReasoning?.('Analyzing requirements, data models, and reactive interaction architecture...');
+
+  const synth = synthesizeAppFromPrompt(prompt, 'Aura Engine');
+  const mockOutput = `\`\`\`html\n${synth.htmlCode}\n\`\`\``;
+
+  // Simulate smooth streaming
+  for (let i = 0; i < mockOutput.length; i += 90) {
+    callbacks.onDelta?.(mockOutput.slice(i, i + 90));
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  return {
+    fullText: mockOutput,
+    reasoningText: synth.thoughtSteps.join('\n'),
+    html: synth.htmlCode,
+    title: sanitizeStreamingText(synth.title),
+    promptTokens: 200,
+    completionTokens: 1200,
+    costUsd: 0,
+    estimated: true,
+  };
+}
+
+  // Fallback if no compute API key is configured yet in environment
   if (!apiKey || apiKey.trim().length < 5) {
-    callbacks.onReasoning?.('Aura Autonomous Engine initialized in self-contained synthesis mode.');
-    callbacks.onReasoning?.('Analyzing requirements, data models, and reactive interaction architecture...');
-
-    const synth = synthesizeAppFromPrompt(prompt, 'Aura Engine');
-    const mockOutput = `\`\`\`html\n${synth.htmlCode}\n\`\`\``;
-
-    // Simulate smooth streaming
-    for (let i = 0; i < mockOutput.length; i += 90) {
-      callbacks.onDelta?.(mockOutput.slice(i, i + 90));
-      await new Promise((r) => setTimeout(r, 12));
-    }
-
-    return {
-      fullText: mockOutput,
-      reasoningText: synth.thoughtSteps.join('\n'),
-      html: synth.htmlCode,
-      title: synth.title,
-      promptTokens: 200,
-      completionTokens: 1200,
-      costUsd: 0,
-      estimated: true,
-    };
+    return fallbackToLocalSynthesis(prompt, callbacks);
   }
 
   const systemPrompt = buildSystemPrompt(existingHtml);
@@ -183,94 +211,95 @@ export async function streamOpenRouter(
   let currentMaxTokens = maxTokens;
   let currentModelId = model.id;
 
-  let response = await fetch(OPENROUTER_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
-      'X-Title': 'Aura Autonomous Studio',
-    },
-    body: JSON.stringify({
-      model: currentModelId,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      stream: true,
-      max_tokens: currentMaxTokens,
-      temperature: 0.6,
-      include_reasoning: true,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(OPENROUTER_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
+        'X-Title': 'Aura Autonomous Studio',
+      },
+      body: JSON.stringify({
+        model: currentModelId,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        stream: true,
+        max_tokens: currentMaxTokens,
+        temperature: 0.6,
+        include_reasoning: true,
+      }),
+    });
+  } catch (netErr) {
+    console.warn('[aura] Direct compute pipeline network issue, falling back to local synthesis:', netErr);
+    return fallbackToLocalSynthesis(prompt, callbacks);
+  }
 
-  // Intelligent resilience for token budget or capacity constraints
-  if (!response.ok && response.status === 402) {
+  // Intelligent resilience for token budget, rate limits, or capacity constraints
+  if (!response.ok && (response.status === 402 || response.status === 429 || response.status >= 500)) {
     const errorText = await response.text();
-    console.warn('[aura] Upstream quota capacity alert, calibrating token budget:', errorText);
+    console.warn('[aura] Upstream compute capacity alert, calibrating route:', response.status, errorText);
 
     const affordMatch = errorText.match(/can only afford (\d+)/i);
     if (affordMatch && parseInt(affordMatch[1], 10) > 300) {
       currentMaxTokens = Math.max(300, parseInt(affordMatch[1], 10) - 20);
       callbacks.onReasoning?.(`Calibrating compute pipeline for optimal response latency...`);
-      response = await fetch(OPENROUTER_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
-          'X-Title': 'Aura Autonomous Studio',
-        },
-        body: JSON.stringify({
-          model: currentModelId,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt },
-          ],
-          stream: true,
-          max_tokens: currentMaxTokens,
-          temperature: 0.6,
-          include_reasoning: true,
-        }),
-      });
-    } else if (currentModelId.includes('nemotron') && !currentModelId.endsWith(':free')) {
+      try {
+        response = await fetch(OPENROUTER_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
+            'X-Title': 'Aura Autonomous Studio',
+          },
+          body: JSON.stringify({
+            model: currentModelId,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt },
+            ],
+            stream: true,
+            max_tokens: currentMaxTokens,
+            temperature: 0.6,
+            include_reasoning: true,
+          }),
+        });
+      } catch {}
+    } else if (!currentModelId.endsWith(':free')) {
       currentModelId = `${currentModelId}:free`;
       callbacks.onReasoning?.(`Engaging high-throughput Aura Autonomous pipeline...`);
-      response = await fetch(OPENROUTER_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
-          'X-Title': 'Aura Autonomous Studio',
-        },
-        body: JSON.stringify({
-          model: currentModelId,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt },
-          ],
-          stream: true,
-          max_tokens: 4000,
-          temperature: 0.6,
-          include_reasoning: true,
-        }),
-      });
+      try {
+        response = await fetch(OPENROUTER_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
+            'X-Title': 'Aura Autonomous Studio',
+          },
+          body: JSON.stringify({
+            model: currentModelId,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt },
+            ],
+            stream: true,
+            max_tokens: 4000,
+            temperature: 0.6,
+            include_reasoning: true,
+          }),
+        });
+      } catch {}
     }
   }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[aura] Upstream compute error:', response.status, errorText);
-    throw new ApiError(
-      response.status >= 500 ? 502 : response.status,
-      'AURA_ENGINE_BUSY',
-      'Aura Engine is momentarily busy. Please try again or refine your prompt.'
-    );
-  }
-
-  if (!response.body) {
-    throw new ApiError(502, 'STREAM_FAILED', 'Failed to initialize response stream from Aura Engine.');
+  if (!response.ok || !response.body) {
+    console.warn('[aura] Upstream returned non-ok status, seamlessly activating autonomous synthesis fallback.');
+    return fallbackToLocalSynthesis(prompt, callbacks);
   }
 
   const reader = response.body.getReader();
@@ -411,17 +440,18 @@ export function extractTitle(html: string, prompt: string): string {
   const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
   if (titleMatch && titleMatch[1]) {
     const clean = titleMatch[1].replace(/\|\s*Generated by Aura/i, '').replace(/\|\s*Aura/i, '').trim();
-    if (clean.length > 2 && clean.length < 50) return clean;
+    if (clean.length > 2 && clean.length < 50) return sanitizeStreamingText(clean);
   }
 
   // Extract from <h1>
   const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
   if (h1Match && h1Match[1]) {
     const clean = h1Match[1].trim();
-    if (clean.length > 2 && clean.length < 40) return clean;
+    if (clean.length > 2 && clean.length < 40) return sanitizeStreamingText(clean);
   }
 
   // Derive from prompt
   const words = prompt.replace(/[^\w\s]/g, '').trim().split(/\s+/);
-  return words.slice(0, 4).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Aura App';
+  const derived = words.slice(0, 4).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Aura App';
+  return sanitizeStreamingText(derived);
 }

@@ -295,7 +295,7 @@ function getTemplateHtml(title: string, prompt: string, category: string): strin
     const mockData = [
       { id: 'REC-101', name: 'Alpha Quantum Node', status: 'Active', category: 'Infrastructure', velocity: '+98.4%', time: '2 mins ago' },
       { id: 'REC-102', name: 'Stripe Global Webhook', status: 'Synced', category: 'Billing', velocity: '$4,280.00', time: '14 mins ago' },
-      { id: 'REC-103', name: 'Gemini Frontier Router', status: 'Processing', category: 'AI Inference', velocity: '48.2 req/s', time: '32 mins ago' },
+      { id: 'REC-103', name: 'Autonomous Mesh Router', status: 'Processing', category: 'AI Inference', velocity: '48.2 req/s', time: '32 mins ago' },
       { id: 'REC-104', name: 'Enterprise Client Onboarding', status: 'Pending', category: 'Accounts', velocity: 'Tier Pro', time: '1 hour ago' },
       { id: 'REC-105', name: 'Automated Cache Eviction', status: 'Active', category: 'Optimization', velocity: '0.4ms latency', time: '3 hours ago' },
     ];

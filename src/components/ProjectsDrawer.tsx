@@ -179,7 +179,7 @@ export function ProjectsDrawer({
                       {new Date(ver.createdAt).toLocaleTimeString()}
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 line-clamp-2">"{ver.prompt}"</p>
+                  <p className="text-[11px] text-zinc-400 line-clamp-2">&ldquo;{ver.prompt}&rdquo;</p>
 
                   <div className="pt-1 flex justify-end">
                     {isCurrent ? (
