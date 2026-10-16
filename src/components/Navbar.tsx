@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
   Monitor, Tablet, Smartphone, Code, Eye, Columns, Share2, 
-  Download, Settings, User, LogOut, Zap, History, FolderKanban, Home
+  Download, Settings, User, LogOut, Zap, History, FolderKanban, Home,
+  BookOpen, HelpCircle, FileText
 } from 'lucide-react';
 import { AuraLogo } from './AuraLogo';
 import { useAuth } from '@/lib/client/auth-context';
@@ -227,6 +228,17 @@ export function Navbar({
           <span className="hidden sm:inline">Export</span>
         </button>
 
+        {/* Documentation / Guide link */}
+        <Link
+          href="/guide"
+          target="_blank"
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all flex items-center gap-1.5 text-xs"
+          title="Open User Guide & Documentation (opens in new tab)"
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">Guide</span>
+        </Link>
+
         {/* User Account / Sign In */}
         {user ? (
           <div className="relative">
@@ -261,6 +273,36 @@ export function Navbar({
                     <span>Landing Page</span>
                   </Link>
 
+                  <Link
+                    href="/guide"
+                    target="_blank"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full px-3 py-2 text-left rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 flex items-center gap-2"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>User Guide & Manual</span>
+                  </Link>
+
+                  <Link
+                    href="/faq"
+                    target="_blank"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full px-3 py-2 text-left rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 flex items-center gap-2"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    <span>FAQ & Knowledge Base</span>
+                  </Link>
+
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full px-3 py-2 text-left rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 flex items-center gap-2"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Terms & Conditions</span>
+                  </Link>
+
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
@@ -269,8 +311,10 @@ export function Navbar({
                     className="w-full px-3 py-2 text-left rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 flex items-center gap-2"
                   >
                     <Settings className="w-3.5 h-3.5" />
-                    <span>Settings</span>
+                    <span>Settings & BYOK</span>
                   </button>
+
+                  <div className="h-[1px] bg-zinc-800 my-1" />
 
                   <button
                     onClick={() => {

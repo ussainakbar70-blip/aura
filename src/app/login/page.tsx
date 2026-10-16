@@ -449,8 +449,16 @@ function LoginForm() {
       )}
 
       {/* Footer */}
-      <footer className="relative z-20 py-4 px-6 border-t border-zinc-900 text-center text-[11px] text-zinc-500">
-        © 2026 Aura Autonomous AI Software Studio • All rights reserved.
+      <footer className="relative z-20 py-4 px-6 border-t border-zinc-900 flex flex-wrap items-center justify-center gap-4 text-[11px] text-zinc-500">
+        <span>© 2026 Aura Autonomous AI Software Studio</span>
+        <span>•</span>
+        <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
+        <span>•</span>
+        <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
+        <span>•</span>
+        <Link href="/faq" className="hover:text-zinc-300 transition-colors">FAQ</Link>
+        <span>•</span>
+        <Link href="/guide" className="hover:text-zinc-300 transition-colors">User Guide</Link>
       </footer>
     </div>
   );

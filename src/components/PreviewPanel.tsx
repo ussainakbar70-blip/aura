@@ -15,6 +15,7 @@ interface PreviewPanelProps {
   isGenerating: boolean;
   version: number;
   onAutoFix?: (errorText: string) => void;
+  onSelectPrompt?: (prompt: string) => void;
 }
 
 export function PreviewPanel({
@@ -25,6 +26,7 @@ export function PreviewPanel({
   isGenerating,
   version,
   onAutoFix,
+  onSelectPrompt,
 }: PreviewPanelProps) {
   const [iframeKey, setIframeKey] = useState(0);
   const [showConsole, setShowConsole] = useState(false);
@@ -33,11 +35,13 @@ export function PreviewPanel({
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const handleRefresh = () => {
+    if (!htmlCode) return;
     setLatestError(null);
     setIframeKey((prev) => prev + 1);
   };
 
   const handleOpenNewTab = () => {
+    if (!htmlCode) return;
     const blob = new Blob([htmlCode], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
@@ -131,8 +135,8 @@ export function PreviewPanel({
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400 w-full font-mono">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span className="text-zinc-500">https://aura.build/sandbox/</span>
-            <span className="text-zinc-200 truncate">{title.toLowerCase().replace(/\s+/g, '-')}</span>
-            <span className="text-zinc-500 ml-auto text-[10px]">v{version}.0</span>
+            <span className="text-zinc-200 truncate">{htmlCode ? title.toLowerCase().replace(/\s+/g, '-') : 'new-app'}</span>
+            <span className="text-zinc-500 ml-auto text-[10px]">{htmlCode ? `v${version}.0` : 'canvas'}</span>
           </div>
         </div>
 
@@ -166,7 +170,10 @@ export function PreviewPanel({
           {/* Refresh iframe */}
           <button
             onClick={handleRefresh}
-            className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800 transition-colors"
+            disabled={!htmlCode}
+            className={`p-1.5 rounded-md border transition-colors ${
+              htmlCode ? 'text-zinc-400 hover:text-white hover:bg-zinc-900 border-zinc-800' : 'text-zinc-700 border-zinc-900 cursor-not-allowed'
+            }`}
             title="Reload sandbox preview"
           >
             <RotateCw className="w-3.5 h-3.5" />
@@ -175,7 +182,10 @@ export function PreviewPanel({
           {/* Open in new window */}
           <button
             onClick={handleOpenNewTab}
-            className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800 transition-colors"
+            disabled={!htmlCode}
+            className={`p-1.5 rounded-md border transition-colors ${
+              htmlCode ? 'text-zinc-400 hover:text-white hover:bg-zinc-900 border-zinc-800' : 'text-zinc-700 border-zinc-900 cursor-not-allowed'
+            }`}
             title="Open in new window"
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -183,7 +193,7 @@ export function PreviewPanel({
         </div>
       </div>
 
-      {/* Self-Healing Diagnostic Alert Bar (Better than Lovable / Emergent) */}
+      {/* Self-Healing Diagnostic Alert Bar */}
       {latestError && (
         <div className="bg-amber-950/80 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between text-xs z-20 backdrop-blur-md">
           <div className="flex items-center gap-2 text-amber-200 truncate">
@@ -216,7 +226,7 @@ export function PreviewPanel({
       )}
 
       {/* Preview Sandbox Canvas */}
-      <div className="flex-1 bg-zinc-950/40 relative flex items-center justify-center p-2 overflow-auto custom-scrollbar">
+      <div className="flex-1 bg-zinc-950/40 relative flex items-center justify-center p-4 overflow-auto custom-scrollbar">
         {/* Ambient Grid Wallpaper */}
         <div 
           className="absolute inset-0 opacity-15 pointer-events-none"
@@ -228,7 +238,7 @@ export function PreviewPanel({
 
         {/* Loading Overlay */}
         {isGenerating && (
-          <div className="absolute inset-0 bg-zinc-950/70 backdrop-blur-sm z-20 flex flex-col items-center justify-center space-y-3">
+          <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center space-y-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 p-0.5 flex items-center justify-center shadow-lg shadow-amber-500/20 animate-spin">
               <div className="w-full h-full bg-zinc-950 rounded-[10px] flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-amber-400" />
@@ -240,17 +250,62 @@ export function PreviewPanel({
           </div>
         )}
 
-        {/* Sandboxed Interactive Iframe */}
-        <div className={`transition-all duration-300 flex items-center justify-center ${viewportStyles}`}>
-          <iframe
-            key={iframeKey}
-            ref={iframeRef}
-            srcDoc={sandboxedHtml}
-            title={title}
-            sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"
-            className="w-full h-full bg-black border-0"
-          />
-        </div>
+        {/* Conditional Content: Empty Lovable Canvas vs Sandboxed Iframe */}
+        {!htmlCode || htmlCode.trim() === '' ? (
+          <div className="max-w-xl mx-auto p-8 rounded-3xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-xl text-center space-y-6 relative z-10 shadow-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 via-zinc-800 to-zinc-900 border border-amber-400/30 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
+              <Sparkles className="w-7 h-7 text-amber-400" />
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Ready to Synthesize</span>
+              </div>
+              <h3 className="text-xl font-bold text-white tracking-tight">
+                Your application canvas is clear
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+                Describe your application in the copilot panel on the left. Aura Autonomous Engine will write, compile, and live-render your reactive interface right here.
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-zinc-800/60 space-y-2.5">
+              <p className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">
+                Or launch with an architectural idea:
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {[
+                  { label: '⚡ SaaS Revenue Analytics', prompt: 'Build a high-conversion SaaS analytics dashboard with revenue metrics, retention charts, and active user breakdown' },
+                  { label: '💳 Crypto Portfolio Desk', prompt: 'Build an ultra-modern crypto trading desk with live order books, token swaps, and multi-asset performance charts' },
+                  { label: '📋 Sprint Kanban Studio', prompt: 'Build a drag-and-drop style collaborative Kanban board with task priority tags, member avatars, and column metrics' },
+                  { label: '🛍️ Luxe Minimal Storefront', prompt: 'Build a luxury minimalist e-commerce storefront with product cards, category filters, interactive cart drawer, and checkout modal' },
+                ].map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => onSelectPrompt?.(item.prompt)}
+                    className="px-3 py-1.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-400/40 text-xs text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 group"
+                  >
+                    <span>{item.label}</span>
+                    <Sparkles className="w-3 h-3 text-zinc-600 group-hover:text-amber-400 transition-colors" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className={`transition-all duration-300 flex items-center justify-center ${viewportStyles}`}>
+            <iframe
+              key={iframeKey}
+              ref={iframeRef}
+              srcDoc={sandboxedHtml}
+              title={title}
+              sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"
+              className="w-full h-full bg-black border-0"
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom Status & Console Bar */}

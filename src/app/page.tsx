@@ -129,7 +129,8 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-amber-300 transition-colors">Features</a>
             <a href="#templates" className="hover:text-amber-300 transition-colors">Showcase</a>
             <a href="#pricing" className="hover:text-amber-300 transition-colors">Pricing</a>
-            <a href="#faq" className="hover:text-amber-300 transition-colors">FAQ</a>
+            <Link href="/guide" className="hover:text-amber-300 transition-colors">Guide</Link>
+            <Link href="/faq" className="hover:text-amber-300 transition-colors">FAQ</Link>
           </nav>
 
           {/* Right Action Buttons */}
@@ -885,11 +886,12 @@ export default function LandingPage() {
           <AuraLogo size="sm" showSubtitle={true} href="/" />
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-zinc-500">
             <Link href="/studio" className="hover:text-zinc-300 transition-colors">Studio</Link>
+            <Link href="/guide" className="hover:text-zinc-300 transition-colors">User Guide</Link>
+            <Link href="/faq" className="hover:text-zinc-300 transition-colors">FAQ</Link>
+            <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy Policy</Link>
             <Link href="/login" className="hover:text-zinc-300 transition-colors">Sign In</Link>
             <Link href="/signup" className="hover:text-zinc-300 transition-colors">Sign Up</Link>
-            <a href="#features" className="hover:text-zinc-300 transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-zinc-300 transition-colors">Pricing</a>
-            <a href="#faq" className="hover:text-zinc-300 transition-colors">FAQ</a>
           </div>
           <p className="text-[11px] text-zinc-600 font-mono">
             © 2026 Aura Autonomous AI Studio.

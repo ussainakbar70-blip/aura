@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/client/auth-context';
 import { Navbar } from '@/components/Navbar';
@@ -18,26 +18,26 @@ import { synthesizeAppFromPrompt } from '@/lib/templates';
 import type { ChatMessage, GenerateEvent } from '@/types';
 
 function AuraStudioContent() {
-  const { user, account, getToken, refreshAccount } = useAuth();
+  const { account, getToken, refreshAccount } = useAuth();
   const searchParams = useSearchParams();
   const initialPromptParam = searchParams.get('prompt');
 
   // Project state
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
   const [projectTitle, setProjectTitle] = useState(
-    initialPromptParam ? initialPromptParam.slice(0, 32) : 'Apex SaaS Matrix'
+    initialPromptParam ? initialPromptParam.slice(0, 32) : 'Untitled App'
   );
   const [version, setVersion] = useState(1);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [viewMode, setViewMode] = useState<'split' | 'preview' | 'code'>('split');
 
-  // Initial code
-  const initialApp = synthesizeAppFromPrompt(
-    initialPromptParam ||
-      'High-conversion SaaS analytics dashboard with revenue metrics, retention charts, and active user breakdown',
-    AURA_ENGINE_DISPLAY.name
-  );
-  const [htmlCode, setHtmlCode] = useState<string>(initialApp.htmlCode);
+  // Initial code: Only synthesize if a prompt query param is provided; otherwise start clean
+  const [htmlCode, setHtmlCode] = useState<string>(() => {
+    if (initialPromptParam && initialPromptParam.trim().length > 0) {
+      return synthesizeAppFromPrompt(initialPromptParam, AURA_ENGINE_DISPLAY.name).htmlCode;
+    }
+    return '';
+  });
 
   // Chat conversation stream
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -108,13 +108,12 @@ function AuraStudioContent() {
     setProjectId(undefined);
     setProjectTitle('Untitled App');
     setVersion(1);
-    const fresh = synthesizeAppFromPrompt('Aura Modern Application', AURA_ENGINE_DISPLAY.name);
-    setHtmlCode(fresh.htmlCode);
+    setHtmlCode('');
     setMessages([
       {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: 'Started new canvas. Describe what you want to build!',
+        content: 'Canvas cleared. Describe the software or web app you want to build, or pick one of the architectural blueprints below!',
         createdAt: Date.now(),
         model: AURA_ENGINE_DISPLAY.name,
       },
@@ -326,6 +325,7 @@ function AuraStudioContent() {
               isGenerating={isGenerating}
               version={version}
               onAutoFix={handleAutoFix}
+              onSelectPrompt={handleSendMessage}
             />
           )}
         </div>

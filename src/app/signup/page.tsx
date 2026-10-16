@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   User, Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, 
-  CheckCircle2, AlertCircle, ShieldCheck, Zap, ArrowLeft, Check
+  AlertCircle, ShieldCheck, Zap, ArrowLeft
 } from 'lucide-react';
 import { AuraLogo } from '@/components/AuraLogo';
 import { useAuth } from '@/lib/client/auth-context';
@@ -312,8 +312,14 @@ function SignupForm() {
                       className="mt-0.5 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400/50 accent-amber-400"
                     />
                     <span>
-                      I agree to the <span className="text-zinc-300 underline">Terms of Service</span> and{' '}
-                      <span className="text-zinc-300 underline">Privacy Policy</span>.
+                      I agree to the{' '}
+                      <Link href="/terms" target="_blank" className="text-zinc-300 underline hover:text-white">
+                        Terms of Service
+                      </Link>{' '}
+                      and{' '}
+                      <Link href="/privacy" target="_blank" className="text-zinc-300 underline hover:text-white">
+                        Privacy Policy
+                      </Link>.
                     </span>
                   </label>
                 </div>
@@ -414,8 +420,16 @@ function SignupForm() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-20 py-4 px-6 border-t border-zinc-900 text-center text-[11px] text-zinc-500">
-        © 2026 Aura Autonomous AI Software Studio • All rights reserved.
+      <footer className="relative z-20 py-4 px-6 border-t border-zinc-900 flex flex-wrap items-center justify-center gap-4 text-[11px] text-zinc-500">
+        <span>© 2026 Aura Autonomous AI Software Studio</span>
+        <span>•</span>
+        <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
+        <span>•</span>
+        <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
+        <span>•</span>
+        <Link href="/faq" className="hover:text-zinc-300 transition-colors">FAQ</Link>
+        <span>•</span>
+        <Link href="/guide" className="hover:text-zinc-300 transition-colors">User Guide</Link>
       </footer>
     </div>
   );

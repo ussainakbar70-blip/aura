@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { X, Key, ShieldCheck, Check, RotateCcw, Cpu, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/lib/client/auth-context';
 
@@ -78,7 +79,10 @@ export function SettingsModal({
               className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500/60 font-mono"
             />
             <p className="text-[11px] text-zinc-500">
-              Leave blank to use Aura&#39;s server-managed GPU infrastructure. Entering a custom key routes generation prompts through your personal endpoint.
+              Leave blank to use Aura&#39;s server-managed GPU infrastructure. Entering a custom key routes generation prompts through your personal endpoint. Need setup instructions? Read our{' '}
+              <Link href="/guide#byok" target="_blank" className="underline text-amber-400 hover:text-amber-300">
+                BYOK Setup Guide
+              </Link>.
             </p>
           </div>
 

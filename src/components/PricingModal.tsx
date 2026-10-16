@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
   X, Check, Zap, Shield, Sparkles, CreditCard, AlertCircle, 
   ExternalLink, Lock, CheckCircle2
@@ -283,8 +284,20 @@ export function PricingModal({ isOpen, onClose, onOpenAuth }: PricingModalProps)
           {/* Fair Usage Policy Explanation */}
           <div className="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800/60 text-xs text-zinc-400 flex items-start gap-3">
             <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold text-white">Fair Usage Policy (FUP):</span> Every generation is measured against actual compute token consumption and deducted from your monthly credit allowance. Daily limits reset every 24 hours at 00:00 UTC to maintain dedicated infrastructure performance.
+            <div className="space-y-1">
+              <div>
+                <span className="font-semibold text-white">Fair Usage Policy (FUP):</span> Every generation is measured against actual compute token consumption and deducted from your monthly credit allowance. Daily limits reset every 24 hours at 00:00 UTC to maintain dedicated infrastructure performance.
+              </div>
+              <p className="text-[11px] text-zinc-500">
+                Have questions? Check out our{' '}
+                <Link href="/terms" target="_blank" className="underline text-zinc-400 hover:text-white">
+                  Terms of Service
+                </Link>{' '}
+                or visit the{' '}
+                <Link href="/faq" target="_blank" className="underline text-zinc-400 hover:text-white">
+                  FAQ & Knowledge Base
+                </Link>.
+              </p>
             </div>
           </div>
         </div>
