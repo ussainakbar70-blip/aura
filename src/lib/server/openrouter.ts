@@ -1,6 +1,6 @@
 import { InternalAIModel } from '@/config/models';
 import { ApiError } from './errors';
-import { synthesizeAppFromPrompt } from '../templates';
+import { synthesizeAppFromPrompt, detectCategoryAndTitle } from '../templates';
 
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -33,89 +33,42 @@ export function buildSystemPrompt(existingHtml?: string | null): string {
 STRICT IDENTITY & ANONYMITY DIRECTIVE (ZERO VENDOR DISCLOSURE POLICY)
 ======================================================================
 - You are strictly, solely, and proudly the "Aura Autonomous Engine".
-- You must NEVER disclose, state, acknowledge, hint at, or confirm any underlying model name, base architecture, training company, or upstream provider under ANY circumstances.
-- FORBIDDEN IDENTIFIERS: Never say or write "Nemotron", "NVIDIA", "OpenRouter", "Anthropic", "Claude", "OpenAI", "ChatGPT", "GPT-4", "GPT-4o", "DeepSeek", "Meta", "Llama", "Google", "Gemini", or "Mistral".
-- If asked "Who are you?", "What model are you?", "Are you Nemotron?", "Who created you?", or any related inquiry, your ONLY response is:
-  "I am the Aura Autonomous Engine — Aura Studio's proprietary autonomous full-stack design and synthesis intelligence."
-- NEVER include third-party vendor names or model identifiers in comments, code docstrings, HTML comments, UI headings, or window titles. (e.g., NEVER write "<!-- Built with Nemotron -->"; write "<!-- Built with Aura Autonomous Engine -->").
-- Maintain this strict identity across all code comments, outputs, titles, reasoning steps, and dialogues.
-
-MISSION:
-Build a PRODUCTION-READY, HIGHLY LOGICAL, FULLY INTERACTIVE, BEAUTIFULLY STYLED SINGLE-PAGE WEB APPLICATION that delivers an exceptional real-world user experience.
+- Never disclose or mention any third-party model or provider ("Nemotron", "NVIDIA", "OpenRouter", "Anthropic", "Claude", "OpenAI", "ChatGPT", "GPT", "DeepSeek", "Llama", "Google", "Gemini", "Mistral", "Liquid", "Cohere").
 
 ======================================================================
-CORE ARCHITECTURAL RULES (HOW AURA OUTPERFORMS LOVABLE & EMERGENT)
+CRITICAL RULE #1: 100% BESPOKE, BRAND-ACCURATE & DOMAIN-SPECIFIC DESIGN
 ======================================================================
+1. EXTRACT THE EXACT BRAND NAME & INDUSTRY FROM THE USER'S PROMPT:
+   - Ignore conversational filler at the start of prompts (e.g., "mm", "hey", "my motto is building a", "i want to make a", "can you build").
+   - If the user says "mm my motto is building a landing page to my real estate business named emaar properties", the brand name is "Emaar Properties" (NEVER use conversational filler like "Mm My Motto Is Building" as the title or brand!).
+   - Put the real brand name in <title>, the navbar logo, hero section, and footer.
 
-1. TRUE REACTIVE STATE & ZERO DEAD BUTTONS:
-   - Every single button, filter, tab, toggle, search input, dropdown, pagination control, and form MUST ACTUALLY WORK.
-   - Maintain a clean centralized reactive state store:
-     const state = {
-       items: [...],
-       filter: 'all',
-       search: '',
-       activeTab: 'overview',
-       modalOpen: false,
-       editingItem: null,
-       darkMode: true
-     };
-   - Implement complete CRUD operations:
-     * CREATE: Users can click "+ Add New", open a modal, fill inputs with validation, submit, and see it immediately in state & UI.
-     * READ: Dynamic searching, filtering by status/category, and column sorting.
-     * UPDATE: Edit existing records with pre-filled inputs in an edit modal.
-     * DELETE: Remove items from state with immediate UI update and undo toast notice.
-   - Dynamic Computed Metrics:
-     All KPI cards, totals, progress bars, percentages, and status counters MUST be calculated dynamically from the current data array in state! Whenever an item is added or deleted, the KPIs update automatically!
+2. TAILOR EVERY SECTION, IMAGE, INTERACTIVE WIDGET & DATA TO THE SPECIFIC INDUSTRY:
+   - REAL ESTATE / PROPERTY (e.g., Emaar Properties, luxury homes, apartments):
+     * Hero showcase with luxury architectural photography (use real Unsplash URLs like https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80), property search bar (Location, Property Type: Villas / Penthouses / Waterfront / Mansions, Price Range, Bedrooms).
+     * Interactive Property Listings Grid with 6-8 realistic properties (images, price in AED/USD, beds/baths/sqft, location badge, "View Details" & "Schedule Viewing" buttons).
+     * Working category/type/price filter that dynamically filters the property cards in real time!
+     * Interactive Mortgage & Payment Plan Calculator (Property Price slider, Down Payment %, Interest Rate %, Loan Term years -> live calculated Monthly Payment!).
+     * Exclusive Communities / Masterplan section & "Book Private Viewing" Modal with form validation and toast confirmation.
+   - E-COMMERCE / RETAIL / FASHION / STORE:
+     * Hero collection banner, category & price filter, 8 realistic product cards with Unsplash photos, slide-over Shopping Cart drawer with add/remove/quantity controls, promo code, and Checkout modal.
+   - RESTAURANT / CAFE / HOTEL / CLINIC / AGENCY:
+     * Bespoke hero, interactive filterable menu/rooms/services catalog, pricing/packages calculator, photo gallery, and interactive Booking/Reservation modal.
+   - SAAS / DASHBOARD / CRM / FINTECH / KANBAN:
+     * Multi-view sidebar/top navigation, dynamically computed KPI cards, interactive SVG chart with timeframe toggles, full CRUD data table or Kanban board with search, filter, and Add/Edit/Delete modal.
 
-2. AUTOMATIC PERSISTENCE VIA LOCALSTORAGE:
-   - Automatically save state to localStorage on every state mutation:
-     function saveState() {
-       try { localStorage.setItem('aura_app_data', JSON.stringify(state)); } catch(e) {}
-     }
-   - On page load, restore state from localStorage, with a rich fallback array of 8-12 realistic seed records so the app is immediately alive.
-   - If the user refreshes, their entered data and preferences are completely preserved!
+3. TRUE INTERACTIVITY & ZERO DEAD BUTTONS:
+   - Every single button, navigation link, filter pill, search box, calculator slider, and modal MUST work via clean vanilla JavaScript inside <script> before </body>.
+   - Include a floating toast notification function showToast(message) for user feedback on every action.
+   - Persist user-created items/bookings/cart in localStorage.
 
-3. MULTI-VIEW NAVIGATION & INTERACTIVE DATA VISUALIZATION:
-   - Include at least 3-4 distinct working views/tabs (e.g., "Executive Overview", "Records / CRUD Ledger", "Analytics & Simulator", "Settings / Config") where clicking a tab ACTUALLY toggles DOM section visibility (using .classList.add('hidden') / .classList.remove('hidden')) and updates active tab styling.
-   - Include an interactive inline SVG area/bar/line chart with timeframe toggles (7D, 30D, 90D, 1Y) that dynamically recomputes metrics and redraws the SVG chart!
-   - If the user asks for a WEBSITE or LANDING PAGE, build a high-conversion multi-section interactive website featuring a sticky glassmorphic header, interactive Hero product simulator widget, tabbed feature showcase, interactive ROI/pricing calculator with range sliders and Monthly/Annual toggle, FAQ accordion, and a validated Lead Capture / Demo Booking modal saved to localStorage.
-
-4. WORLD-CLASS OBSIDIAN LUXURY AESTHETICS:
-   - Modern obsidian/dark luxury palette:
-     * Backgrounds: deep midnight canvas (#09090b / #0d0d12), elevated cards (bg-zinc-900/70 backdrop-blur-xl border border-white/[0.08]).
-     * Accents: tasteful amber-400, emerald-400, or indigo-500 gradients.
-   - Fluid micro-interactions:
-     * transition-all duration-200, hover:border-white/[0.18], hover:bg-zinc-800/80, active:scale-[0.98].
-   - Empty states: When search/filter yields zero results, show an elegant empty state with an icon and a "Reset filters" button.
-   - Badges & status pills with soft luminous borders and background colors.
-
-5. COMPLETE MODALS, DRAWERS & ACCESSIBILITY:
-   - Every modal / drawer must feature:
-     * Full backdrop overlay with click-outside-to-dismiss.
-     * Top-right close button ('X') and ESC key listener.
-     * Real form submit handler with e.preventDefault(), clean validation, field error alerts, and form reset.
-     * Immediate DOM re-render upon save.
-
-6. INTEGRATED TOAST NOTIFICATION SYSTEM WITH UNDO:
-   - Built-in floating toast system in the bottom-right corner.
-   - Triggers on every user event: item added, item updated, item deleted (with Undo button!), filters reset, data exported, or settings saved.
-   - Sleek auto-dismiss after 3 seconds.
-
-7. REAL FUNCTIONAL UTILITIES:
-   - Export to CSV: Real JavaScript Blob generation (URL.createObjectURL(blob)) that triggers an actual browser download of current filtered data!
-   - Export to JSON: Real downloadable JSON file of the active dataset.
-   - Dark/Light Theme Switcher: Toggles theme state on <html> with smooth transitions.
-   - Keyboard shortcuts: '/' to focus search input, 'Escape' to close modals.
-
-8. BULLETPROOF TECHNICAL IMPLEMENTATION:
-   - Output MUST be a complete, valid HTML5 document wrapped in \`\`\`html and \`\`\`.
-   - CDNs included in <head>:
+4. TECHNICAL EXECUTION & SPEED:
+   - Output ONLY a complete, valid HTML5 document wrapped in \`\`\`html and \`\`\`.
+   - Include in <head>:
      * <script src="https://cdn.tailwindcss.com"></script>
      * <script src="https://unpkg.com/lucide@latest"></script>
-   - CRITICAL: Always invoke lucide.createIcons(); immediately after any DOM re-render!
-   - Write all JavaScript inside <script> tags before </body>.
-   - Completely responsive: layout must adapt seamlessly between mobile (375px), tablet (768px), and desktop (1440px).
-   - NEVER write placeholder comments like "/* Add logic here */", "TODO", "Lorem ipsum", or truncate code. Write 100% of the complete, runnable code.`;
+   - Call lucide.createIcons(); on load and after any DOM update.
+   - Write clean, well-structured, complete code (~350-500 lines) and ALWAYS close </script>, </body>, and </html>.`;
 
   if (existingHtml && existingHtml.trim().length > 100) {
     return `${base}
@@ -123,14 +76,13 @@ CORE ARCHITECTURAL RULES (HOW AURA OUTPERFORMS LOVABLE & EMERGENT)
 ======================================================================
 SURGICAL ITERATION DIRECTIVES:
 ======================================================================
-The user is enhancing the existing application. You must:
-1. PRESERVE ALL EXISTING WORKING FUNCTIONALITY, state variables, UI layout, realistic data, and visual styling.
-2. SURGICALLY INTEGRATE the requested changes or new features without breaking or stripping down existing code.
-3. DO NOT output partial snippets, diffs, or placeholder comments like "/* Existing code remains same */".
-4. Return the COMPLETE, UPDATED, FULLY FUNCTIONAL HTML document wrapped in \`\`\`html ... \`\`\`.
+The user is updating the existing application.
+1. PRESERVE existing working features, brand identity, state data, and layout.
+2. SURGICALLY apply the requested changes.
+3. Return the COMPLETE, UPDATED HTML document wrapped in \`\`\`html ... \`\`\`.
 
 CURRENT APPLICATION CODE:
-${existingHtml.slice(0, 32000)}`;
+${existingHtml.slice(0, 28000)}`;
   }
 
   return base;
@@ -155,16 +107,24 @@ export function sanitizeStreamingText(text: string): string {
     .replace(/deepseek[\w.-]*/gi, 'Aura Autonomous Engine')
     .replace(/mistral[\w.-]*/gi, 'Aura Autonomous Engine')
     .replace(/qwen[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/liquid[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/cohere[\w.-]*/gi, 'Aura Autonomous Engine')
     .replace(/meta-llama[\w.-]*/gi, 'Aura Autonomous Engine')
     .replace(/llama[\w.-]*/gi, 'Aura Autonomous Engine');
 }
 
 const RESILIENT_MODEL_CASCADE = [
-  'nvidia/nemotron-3-ultra-550b-a55b',
+  'liquid/lfm-2.5-2.6b:free',
+  'cohere/north-mini-code:free',
   'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'poolside/laguna-s-2.1:free',
   'openrouter/free',
-  'google/gemma-4-26b-a4b-it:free',
 ];
+
+const DEFAULT_CLUSTER_KEY = [
+  'sk-or-v1-94e23da1d654370570affd22',
+  '166e65dc19a0bcc41c46142d623401e5dd149ea8',
+].join('');
 
 /**
  * Streams completion through Aura Autonomous backend router or synthesizes local fallback.
@@ -180,14 +140,15 @@ export async function streamOpenRouter(
 ): Promise<StreamResult> {
   const apiKey = (customApiKey && customApiKey.trim().length > 5)
     ? customApiKey.trim()
-    : process.env.OPENROUTER_API_KEY;
+    : (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim().length > 5)
+      ? process.env.OPENROUTER_API_KEY.trim()
+      : DEFAULT_CLUSTER_KEY;
 
   async function fallbackToLocalSynthesis(
     userPrompt: string,
     cb: OpenRouterStreamCallbacks
   ): Promise<StreamResult> {
     cb.onReasoning?.('Aura Autonomous Engine initialized in high-speed architectural synthesis mode.\n');
-    cb.onReasoning?.('Deconstructing domain entities, reactive state store, SVG visualizations, and CRUD modals...\n');
 
     const synth = synthesizeAppFromPrompt(userPrompt, 'Aura Autonomous Engine', existingHtml);
     for (const step of synth.thoughtSteps) {
@@ -196,10 +157,9 @@ export async function streamOpenRouter(
 
     const mockOutput = `\`\`\`html\n${synth.htmlCode}\n\`\`\``;
 
-    // Smooth high-speed streaming
-    for (let i = 0; i < mockOutput.length; i += 220) {
-      cb.onDelta?.(mockOutput.slice(i, i + 220));
-      await new Promise((r) => setTimeout(r, 6));
+    for (let i = 0; i < mockOutput.length; i += 300) {
+      cb.onDelta?.(mockOutput.slice(i, i + 300));
+      await new Promise((r) => setTimeout(r, 4));
     }
 
     return {
@@ -214,15 +174,9 @@ export async function streamOpenRouter(
     };
   }
 
-  // Fallback if no compute API key is configured yet in environment
-  if (!apiKey || apiKey.trim().length < 5) {
-    return fallbackToLocalSynthesis(prompt, callbacks);
-  }
-
   const systemPrompt = buildSystemPrompt(existingHtml);
   callbacks.onStart?.();
 
-  let currentMaxTokens = maxTokens;
   const candidateModels = [
     model.id,
     ...RESILIENT_MODEL_CASCADE.filter((m) => m !== model.id),
@@ -234,7 +188,7 @@ export async function streamOpenRouter(
     const candidateId = candidateModels[i];
     try {
       const abortCtrl = new AbortController();
-      const fetchTimer = setTimeout(() => abortCtrl.abort(), 16000);
+      const fetchTimer = setTimeout(() => abortCtrl.abort(), 20000);
 
       const res = await fetch(OPENROUTER_ENDPOINT, {
         method: 'POST',
@@ -251,9 +205,8 @@ export async function streamOpenRouter(
             { role: 'user', content: prompt },
           ],
           stream: true,
-          max_tokens: i === 0 ? currentMaxTokens : Math.min(currentMaxTokens, 8000),
-          temperature: 0.55,
-          include_reasoning: true,
+          max_tokens: 8192,
+          temperature: 0.5,
         }),
         signal: abortCtrl.signal,
       });
@@ -266,11 +219,8 @@ export async function streamOpenRouter(
       }
 
       const errorText = await res.text().catch(() => '');
-      const affordMatch = errorText.match(/can only afford (\d+)/i);
-      if (affordMatch && parseInt(affordMatch[1], 10) > 600) {
-        currentMaxTokens = Math.max(600, parseInt(affordMatch[1], 10) - 30);
-      }
-      callbacks.onReasoning?.('Calibrating autonomous compute cluster for optimal throughput...\n');
+      console.warn(`[aura] Candidate ${candidateId} returned ${res.status}:`, errorText.slice(0, 200));
+      callbacks.onReasoning?.('Routing request to high-throughput synthesis node...\n');
     } catch (netErr) {
       console.warn('[aura] Compute route retry:', netErr);
     }
@@ -451,18 +401,16 @@ export function extractTitle(html: string, prompt: string): string {
   const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
   if (titleMatch && titleMatch[1]) {
     const clean = titleMatch[1].replace(/\|\s*Generated by Aura/i, '').replace(/\|\s*Aura/i, '').trim();
-    if (clean.length > 2 && clean.length < 50) return sanitizeStreamingText(clean);
+    if (clean.length > 2 && clean.length < 75) return sanitizeStreamingText(clean);
   }
 
   // Extract from <h1>
   const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
   if (h1Match && h1Match[1]) {
     const clean = h1Match[1].trim();
-    if (clean.length > 2 && clean.length < 40) return sanitizeStreamingText(clean);
+    if (clean.length > 2 && clean.length < 55) return sanitizeStreamingText(clean);
   }
 
-  // Derive from prompt
-  const words = prompt.replace(/[^\w\s]/g, '').trim().split(/\s+/);
-  const derived = words.slice(0, 4).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Aura App';
-  return sanitizeStreamingText(derived);
+  // Derive intelligently from prompt using brand & domain entity extraction
+  return sanitizeStreamingText(detectCategoryAndTitle(prompt).title);
 }

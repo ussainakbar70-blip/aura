@@ -98,6 +98,8 @@ export function detectCategoryAndTitle(prompt: string): { category: AppCategory;
     p.includes('hotel') ||
     p.includes('clinic') ||
     p.includes('real estate') ||
+    p.includes('real estae') ||
+    p.includes('propert') ||
     p.includes('marketing site')
   ) {
     const clean = extractCleanTitle(prompt, 'Vanguard Digital — Interactive Flagship Website');
@@ -134,19 +136,53 @@ export function detectCategoryAndTitle(prompt: string): { category: AppCategory;
   };
 }
 
+function formatWordsTitleCase(str: string): string {
+  const words = str.trim().split(/\s+/).slice(0, 5);
+  const formatted = words
+    .map((w) => (w.length <= 3 && w === w.toUpperCase() ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+    .join(' ');
+  return formatted.length > 42 ? formatted.slice(0, 42).trim() : formatted;
+}
+
 function extractCleanTitle(prompt: string, defaultTitle: string): string {
+  // 1. Check for explicit brand/business name ("named X", "called X", "titled X")
+  const namedMatch = prompt.match(
+    /\b(?:named|called|titled|brand\s+name\s+is|business\s+named|company\s+named|store\s+named)\s+["']?([a-zA-Z0-9\s&'-]{2,40})["']?/i
+  );
+  if (namedMatch && namedMatch[1]) {
+    const brandRaw = namedMatch[1]
+      .replace(/\b(with|that|featuring|which|where|including|using|and\s+add|and\s+include)\b[\s\S]*$/i, '')
+      .trim();
+    if (brandRaw.length >= 2) {
+      return formatWordsTitleCase(brandRaw);
+    }
+  }
+
+  // 2. Check for "for <Brand/Domain>" after "landing page / website / app / platform / dashboard"
+  const forMatch = prompt.match(
+    /\b(?:landing\s+page|website|web\s+app|application|app|platform|portal|store|dashboard)\s+(?:for|to)\s+(?:my|our|a|an|the)?\s*([a-zA-Z0-9\s&'-]{3,45})/i
+  );
+  if (forMatch && forMatch[1]) {
+    const targetRaw = forMatch[1]
+      .replace(/\b(named|called|with|that|featuring|including|using)\b[\s\S]*$/i, '')
+      .replace(/\breal\s+estae\b/i, 'Real Estate')
+      .trim();
+    if (targetRaw.length >= 3) {
+      return formatWordsTitleCase(targetRaw);
+    }
+  }
+
+  // 3. Strip conversational filler and action verbs from start
   const cleaned = prompt
-    .replace(/^(build|create|make|design|develop|generate|architect)\s+(a|an|the)?\s*/i, '')
+    .replace(/^(?:mm+|um+|uh+|hey|hi|hello|yo|okay|ok|so|well|please|can\s+you|could\s+you|i\s+want\s+to|i\s+need\s+to|my\s+motto\s+is|i'm\s+looking\s+to|help\s+me)[\s,.-]+/gi, '')
+    .replace(/^(?:build|building|create|creating|make|making|design|designing|develop|developing|generate|generating|architect|architecting)\s+(?:me\s+)?(?:a|an|the|my|our)?\s*/i, '')
+    .replace(/^(?:landing\s+page|website|web\s+app|app|application)\s+(?:for|to)\s+(?:my|our|a|an|the)?\s*/i, '')
     .replace(/\b(with|that has|featuring|including|using)\b[\s\S]*$/i, '')
     .replace(/[^\w\s&-]/g, '')
     .trim();
 
-  if (!cleaned || cleaned.length < 4) return defaultTitle;
-  const words = cleaned.split(/\s+/).slice(0, 5);
-  const formatted = words
-    .map((w) => (w.length <= 3 && w === w.toUpperCase() ? w : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(' ');
-  return formatted.length > 42 ? formatted.slice(0, 42).trim() : formatted;
+  if (!cleaned || cleaned.length < 3) return defaultTitle;
+  return formatWordsTitleCase(cleaned);
 }
 
 /**

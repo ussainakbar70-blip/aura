@@ -7,6 +7,8 @@ import { streamOpenRouter } from '@/lib/server/openrouter';
 import { usdToCredits } from '@/config/plans';
 import type { ChatMessage, GenerateEvent } from '@/types';
 
+export const maxDuration = 60;
+
 interface GenerateBody {
   prompt: string;
   projectId?: string;
@@ -92,7 +94,7 @@ export async function POST(req: Request) {
           const asstMsg: ChatMessage = {
             id: `msg_${asstNow}_asst`,
             role: 'assistant',
-            content: streamResult.reasoningText || `Architected and synthesized ${streamResult.title} with full interactive state.`,
+            content: `Built "${streamResult.title}" with bespoke domain UI, interactive components, and responsive styling. You can test all interactive features directly in the preview or ask for any refinements!`,
             createdAt: asstNow,
             model: AURA_ENGINE_DISPLAY.name,
             credits: Math.round(actualCredits * 100) / 100,

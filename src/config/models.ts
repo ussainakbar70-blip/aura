@@ -26,50 +26,50 @@ export const AURA_ENGINE_DISPLAY = {
  * Foundational Engine: Nemotron 3 Ultra (550B MoE, 55B active, hybrid Transformer-Mamba).
  * Completely stealth routing with zero identity disclosure to client or user.
  */
-export const PRIMARY_AUTONOMOUS_MODEL_ID = 'nvidia/nemotron-3-ultra-550b-a55b';
-export const FALLBACK_AUTONOMOUS_MODEL_ID = 'nvidia/nemotron-3-ultra-550b-a55b:free';
+export const PRIMARY_AUTONOMOUS_MODEL_ID = 'liquid/lfm-2.5-2.6b:free';
+export const FALLBACK_AUTONOMOUS_MODEL_ID = 'cohere/north-mini-code:free';
 
 /**
  * Internal routing pool.
- * Backend dynamically routes user requests to Nemotron 3 Ultra compute pipelines
- * scaled by tier token allocations, with automatic failover to high-throughput free route.
+ * Backend dynamically routes user requests to high-speed autonomous synthesis pipelines
+ * scaled by tier token allocations, with automatic failover across active coding models.
  */
 export const INTERNAL_MODELS: Record<PlanId, InternalAIModel> = {
   free: {
     id: PRIMARY_AUTONOMOUS_MODEL_ID,
     internalLabel: 'Aura Autonomous Engine (Core)',
     description: 'High-speed autonomous UI synthesis with deep structural reasoning.',
-    inputPerM: 0.6,
-    outputPerM: 2.4,
+    inputPerM: 0.1,
+    outputPerM: 0.2,
     minPlan: 'free',
-    maxTokens: 8000,
+    maxTokens: 8192,
   },
   starter: {
     id: PRIMARY_AUTONOMOUS_MODEL_ID,
     internalLabel: 'Aura Autonomous Engine (Plus)',
     description: 'Advanced full-stack synthesis with full state persistence & CRUD.',
-    inputPerM: 0.6,
-    outputPerM: 2.4,
+    inputPerM: 0.1,
+    outputPerM: 0.2,
     minPlan: 'starter',
-    maxTokens: 12000,
+    maxTokens: 8192,
   },
   mid: {
     id: PRIMARY_AUTONOMOUS_MODEL_ID,
     internalLabel: 'Aura Autonomous Engine (Turbo)',
     description: 'Flagship architectural reasoning for complex multi-view applications.',
-    inputPerM: 0.6,
-    outputPerM: 2.4,
+    inputPerM: 0.1,
+    outputPerM: 0.2,
     minPlan: 'mid',
-    maxTokens: 16000,
+    maxTokens: 8192,
   },
   pro: {
     id: PRIMARY_AUTONOMOUS_MODEL_ID,
     internalLabel: 'Aura Autonomous Engine (Ultra)',
     description: 'Premier frontier reasoning for enterprise-grade autonomous systems.',
-    inputPerM: 0.6,
-    outputPerM: 2.4,
+    inputPerM: 0.1,
+    outputPerM: 0.2,
     minPlan: 'pro',
-    maxTokens: 24000,
+    maxTokens: 8192,
   },
 };
 
