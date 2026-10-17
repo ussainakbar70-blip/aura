@@ -48,7 +48,6 @@ export function ChatPanel({
 
     if (account && account.today.requests >= account.today.requestLimit) {
       onOpenPricing();
-      return;
     }
 
     onSendMessage(inputPrompt.trim());

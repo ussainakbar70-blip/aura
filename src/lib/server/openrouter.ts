@@ -160,10 +160,10 @@ export function sanitizeStreamingText(text: string): string {
 }
 
 const RESILIENT_MODEL_CASCADE = [
-  'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
-  'deepseek/deepseek-chat-v3-0324:free',
-  'qwen/qwen-2.5-coder-32b-instruct:free',
-  'google/gemini-2.0-flash-exp:free',
+  'nvidia/nemotron-3-ultra-550b-a55b',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'openrouter/free',
+  'google/gemma-4-26b-a4b-it:free',
 ];
 
 /**
@@ -197,9 +197,9 @@ export async function streamOpenRouter(
     const mockOutput = `\`\`\`html\n${synth.htmlCode}\n\`\`\``;
 
     // Smooth high-speed streaming
-    for (let i = 0; i < mockOutput.length; i += 140) {
-      cb.onDelta?.(mockOutput.slice(i, i + 140));
-      await new Promise((r) => setTimeout(r, 8));
+    for (let i = 0; i < mockOutput.length; i += 220) {
+      cb.onDelta?.(mockOutput.slice(i, i + 220));
+      await new Promise((r) => setTimeout(r, 6));
     }
 
     return {
@@ -233,6 +233,9 @@ export async function streamOpenRouter(
   for (let i = 0; i < candidateModels.length; i++) {
     const candidateId = candidateModels[i];
     try {
+      const abortCtrl = new AbortController();
+      const fetchTimer = setTimeout(() => abortCtrl.abort(), 16000);
+
       const res = await fetch(OPENROUTER_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -252,7 +255,10 @@ export async function streamOpenRouter(
           temperature: 0.55,
           include_reasoning: true,
         }),
+        signal: abortCtrl.signal,
       });
+
+      clearTimeout(fetchTimer);
 
       if (res.ok && res.body) {
         response = res;
@@ -286,8 +292,13 @@ export async function streamOpenRouter(
 
   try {
     while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      // 15-second stall protection per chunk
+      const readPromise = reader.read();
+      const timeoutPromise = new Promise<{ done: true; value: undefined }>((resolve) =>
+        setTimeout(() => resolve({ done: true, value: undefined }), 15000)
+      );
+      const { done, value } = await Promise.race([readPromise, timeoutPromise]);
+      if (done || !value) break;
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -334,8 +345,12 @@ export async function streamOpenRouter(
         }
       }
     }
+  } catch (readErr) {
+    console.warn('[aura] Stream read interrupted:', readErr);
   } finally {
-    reader.releaseLock();
+    try {
+      reader.releaseLock();
+    } catch {}
   }
 
   if (!completionTokens) {
@@ -374,30 +389,36 @@ export async function streamOpenRouter(
  * Extracts pure HTML document from markdown codeblocks or raw HTML.
  */
 export function extractHtml(text: string): string {
-  // Check for ```html ... ``` block
+  let html = '';
+
+  // 1. Check for ```html ... ``` or ```xml ... ``` or open ```html
   const codeBlockMatch = text.match(/```(?:html|xml)?\s*\n([\s\S]*?)(?:```|$)/i);
   if (codeBlockMatch && codeBlockMatch[1]) {
     const candidate = codeBlockMatch[1].trim();
-    if (candidate.includes('<!DOCTYPE') || candidate.includes('<html') || candidate.includes('<body') || candidate.includes('<head')) {
-      return candidate;
+    if (candidate.includes('<!DOCTYPE') || candidate.includes('<html') || candidate.includes('<body') || candidate.includes('<head') || candidate.includes('<div')) {
+      html = candidate;
     }
   }
 
-  // Check for <!DOCTYPE html> ... </html>
-  const docMatch = text.match(/<!DOCTYPE[\s\S]*?<\/html>/i);
-  if (docMatch) {
-    return docMatch[0].trim();
+  // 2. Check for <!DOCTYPE html> ... </html> or unclosed
+  if (!html) {
+    const docMatch = text.match(/<!DOCTYPE[\s\S]*?(?:<\/html>|$)/i);
+    if (docMatch && docMatch[0].length > 80) {
+      html = docMatch[0].trim();
+    }
   }
 
-  // Check for <html ... </html>
-  const htmlMatch = text.match(/<html[\s\S]*?<\/html>/i);
-  if (htmlMatch) {
-    return `<!DOCTYPE html>\n${htmlMatch[0].trim()}`;
+  // 3. Check for <html ... </html> or unclosed
+  if (!html) {
+    const htmlMatch = text.match(/<html[\s\S]*?(?:<\/html>|$)/i);
+    if (htmlMatch && htmlMatch[0].length > 80) {
+      html = `<!DOCTYPE html>\n${htmlMatch[0].trim()}`;
+    }
   }
 
-  // Fallback: wrap raw content in minimal HTML shell if needed
-  if (text.includes('<div') || text.includes('<main') || text.includes('<header')) {
-    return `<!DOCTYPE html>
+  // 4. Fallback: wrap raw component content in minimal HTML shell if needed
+  if (!html && (text.includes('<div') || text.includes('<main') || text.includes('<header'))) {
+    html = `<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
@@ -412,7 +433,18 @@ export function extractHtml(text: string): string {
 </html>`;
   }
 
-  return text;
+  if (!html) return text;
+
+  // Auto-close missing tags if stream was truncated
+  if (!html.includes('</html>')) {
+    if (!html.includes('</body>')) {
+      html += '\n<script>try { lucide.createIcons(); } catch(e) {}</script>\n</body>\n</html>';
+    } else {
+      html += '\n</html>';
+    }
+  }
+
+  return html;
 }
 
 export function extractTitle(html: string, prompt: string): string {
