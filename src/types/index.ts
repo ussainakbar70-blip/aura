@@ -60,6 +60,13 @@ export interface ApiErrorBody {
   error: { code: string; message: string };
 }
 
+export interface CodeFile {
+  name: string;
+  language: string;
+  content: string;
+  description?: string;
+}
+
 /** Server-sent events emitted by POST /api/generate. */
 export type GenerateEvent =
   | { type: 'start'; model: string; maxTokens: number }
@@ -67,6 +74,7 @@ export type GenerateEvent =
   | { type: 'delta'; text: string }
   | {
       type: 'done';
+      projectId?: string;
       version: number;
       title: string;
       message: ChatMessage;
@@ -75,3 +83,4 @@ export type GenerateEvent =
       account: AccountView;
     }
   | { type: 'error'; code: string; message: string; account?: AccountView };
+

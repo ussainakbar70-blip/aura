@@ -75,7 +75,12 @@ CORE ARCHITECTURAL RULES (HOW AURA OUTPERFORMS LOVABLE & EMERGENT)
    - On page load, restore state from localStorage, with a rich fallback array of 8-12 realistic seed records so the app is immediately alive.
    - If the user refreshes, their entered data and preferences are completely preserved!
 
-3. WORLD-CLASS OBSIDIAN LUXURY AESTHETICS:
+3. MULTI-VIEW NAVIGATION & INTERACTIVE DATA VISUALIZATION:
+   - Include at least 3-4 distinct working views/tabs (e.g., "Executive Overview", "Records / CRUD Ledger", "Analytics & Simulator", "Settings / Config") where clicking a tab ACTUALLY toggles DOM section visibility (using .classList.add('hidden') / .classList.remove('hidden')) and updates active tab styling.
+   - Include an interactive inline SVG area/bar/line chart with timeframe toggles (7D, 30D, 90D, 1Y) that dynamically recomputes metrics and redraws the SVG chart!
+   - If the user asks for a WEBSITE or LANDING PAGE, build a high-conversion multi-section interactive website featuring a sticky glassmorphic header, interactive Hero product simulator widget, tabbed feature showcase, interactive ROI/pricing calculator with range sliders and Monthly/Annual toggle, FAQ accordion, and a validated Lead Capture / Demo Booking modal saved to localStorage.
+
+4. WORLD-CLASS OBSIDIAN LUXURY AESTHETICS:
    - Modern obsidian/dark luxury palette:
      * Backgrounds: deep midnight canvas (#09090b / #0d0d12), elevated cards (bg-zinc-900/70 backdrop-blur-xl border border-white/[0.08]).
      * Accents: tasteful amber-400, emerald-400, or indigo-500 gradients.
@@ -84,31 +89,32 @@ CORE ARCHITECTURAL RULES (HOW AURA OUTPERFORMS LOVABLE & EMERGENT)
    - Empty states: When search/filter yields zero results, show an elegant empty state with an icon and a "Reset filters" button.
    - Badges & status pills with soft luminous borders and background colors.
 
-4. COMPLETE MODALS, DRAWERS & ACCESSIBILITY:
+5. COMPLETE MODALS, DRAWERS & ACCESSIBILITY:
    - Every modal / drawer must feature:
      * Full backdrop overlay with click-outside-to-dismiss.
      * Top-right close button ('X') and ESC key listener.
      * Real form submit handler with e.preventDefault(), clean validation, field error alerts, and form reset.
      * Immediate DOM re-render upon save.
 
-5. INTEGRATED TOAST NOTIFICATION SYSTEM:
+6. INTEGRATED TOAST NOTIFICATION SYSTEM WITH UNDO:
    - Built-in floating toast system in the bottom-right corner.
-   - Triggers on every user event: item added, item updated, item deleted, filters reset, data exported, or settings saved.
-   - Sleek progress bar with auto-dismiss after 2.5 seconds.
+   - Triggers on every user event: item added, item updated, item deleted (with Undo button!), filters reset, data exported, or settings saved.
+   - Sleek auto-dismiss after 3 seconds.
 
-6. REAL FUNCTIONAL UTILITIES:
+7. REAL FUNCTIONAL UTILITIES:
    - Export to CSV: Real JavaScript Blob generation (URL.createObjectURL(blob)) that triggers an actual browser download of current filtered data!
    - Export to JSON: Real downloadable JSON file of the active dataset.
-   - Dark/Light Theme Switcher: Toggles a 'dark' class on <html> with smooth CSS transitions.
+   - Dark/Light Theme Switcher: Toggles theme state on <html> with smooth transitions.
+   - Keyboard shortcuts: '/' to focus search input, 'Escape' to close modals.
 
-7. BULLETPROOF TECHNICAL IMPLEMENTATION:
+8. BULLETPROOF TECHNICAL IMPLEMENTATION:
    - Output MUST be a complete, valid HTML5 document wrapped in \`\`\`html and \`\`\`.
    - CDNs included in <head>:
      * <script src="https://cdn.tailwindcss.com"></script>
      * <script src="https://unpkg.com/lucide@latest"></script>
    - CRITICAL: Always invoke lucide.createIcons(); immediately after any DOM re-render!
    - Write all JavaScript inside <script> tags before </body>.
-   - Completely responsive: layout must adapt seamlessly between mobile (375px), tablet (768px), and desktop (1440px), including a mobile drawer or collapsible hamburger menu.
+   - Completely responsive: layout must adapt seamlessly between mobile (375px), tablet (768px), and desktop (1440px).
    - NEVER write placeholder comments like "/* Add logic here */", "TODO", "Lorem ipsum", or truncate code. Write 100% of the complete, runnable code.`;
 
   if (existingHtml && existingHtml.trim().length > 100) {
@@ -148,12 +154,20 @@ export function sanitizeStreamingText(text: string): string {
     .replace(/gemini[\w.-]*/gi, 'Aura Autonomous Engine')
     .replace(/deepseek[\w.-]*/gi, 'Aura Autonomous Engine')
     .replace(/mistral[\w.-]*/gi, 'Aura Autonomous Engine')
+    .replace(/qwen[\w.-]*/gi, 'Aura Autonomous Engine')
     .replace(/meta-llama[\w.-]*/gi, 'Aura Autonomous Engine')
     .replace(/llama[\w.-]*/gi, 'Aura Autonomous Engine');
 }
 
+const RESILIENT_MODEL_CASCADE = [
+  'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
+  'deepseek/deepseek-chat-v3-0324:free',
+  'qwen/qwen-2.5-coder-32b-instruct:free',
+  'google/gemini-2.0-flash-exp:free',
+];
+
 /**
- * Streams completion through Nemotron 3 Ultra backend router or synthesizes local fallback.
+ * Streams completion through Aura Autonomous backend router or synthesizes local fallback.
  * Strictly conceals all vendor identities so the client only ever interacts with Aura Engine.
  */
 export async function streamOpenRouter(
@@ -168,37 +182,37 @@ export async function streamOpenRouter(
     ? customApiKey.trim()
     : process.env.OPENROUTER_API_KEY;
 
-/**
- * Resilient self-contained local synthesis fallback.
- * Ensures the web application is 100% operational offline, during upstream outages, or without API keys.
- */
-async function fallbackToLocalSynthesis(
-  prompt: string,
-  callbacks: OpenRouterStreamCallbacks
-): Promise<StreamResult> {
-  callbacks.onReasoning?.('Aura Autonomous Engine initialized in self-contained synthesis mode.');
-  callbacks.onReasoning?.('Analyzing requirements, data models, and reactive interaction architecture...');
+  async function fallbackToLocalSynthesis(
+    userPrompt: string,
+    cb: OpenRouterStreamCallbacks
+  ): Promise<StreamResult> {
+    cb.onReasoning?.('Aura Autonomous Engine initialized in high-speed architectural synthesis mode.\n');
+    cb.onReasoning?.('Deconstructing domain entities, reactive state store, SVG visualizations, and CRUD modals...\n');
 
-  const synth = synthesizeAppFromPrompt(prompt, 'Aura Engine');
-  const mockOutput = `\`\`\`html\n${synth.htmlCode}\n\`\`\``;
+    const synth = synthesizeAppFromPrompt(userPrompt, 'Aura Autonomous Engine', existingHtml);
+    for (const step of synth.thoughtSteps) {
+      cb.onReasoning?.(`• ${step}\n`);
+    }
 
-  // Simulate smooth streaming
-  for (let i = 0; i < mockOutput.length; i += 90) {
-    callbacks.onDelta?.(mockOutput.slice(i, i + 90));
-    await new Promise((r) => setTimeout(r, 10));
+    const mockOutput = `\`\`\`html\n${synth.htmlCode}\n\`\`\``;
+
+    // Smooth high-speed streaming
+    for (let i = 0; i < mockOutput.length; i += 140) {
+      cb.onDelta?.(mockOutput.slice(i, i + 140));
+      await new Promise((r) => setTimeout(r, 8));
+    }
+
+    return {
+      fullText: mockOutput,
+      reasoningText: synth.thoughtSteps.join('\n'),
+      html: synth.htmlCode,
+      title: sanitizeStreamingText(synth.title),
+      promptTokens: 250,
+      completionTokens: 1600,
+      costUsd: 0,
+      estimated: true,
+    };
   }
-
-  return {
-    fullText: mockOutput,
-    reasoningText: synth.thoughtSteps.join('\n'),
-    html: synth.htmlCode,
-    title: sanitizeStreamingText(synth.title),
-    promptTokens: 200,
-    completionTokens: 1200,
-    costUsd: 0,
-    estimated: true,
-  };
-}
 
   // Fallback if no compute API key is configured yet in environment
   if (!apiKey || apiKey.trim().length < 5) {
@@ -209,96 +223,54 @@ async function fallbackToLocalSynthesis(
   callbacks.onStart?.();
 
   let currentMaxTokens = maxTokens;
-  let currentModelId = model.id;
+  const candidateModels = [
+    model.id,
+    ...RESILIENT_MODEL_CASCADE.filter((m) => m !== model.id),
+  ];
 
-  let response: Response;
-  try {
-    response = await fetch(OPENROUTER_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
-        'X-Title': 'Aura Autonomous Studio',
-      },
-      body: JSON.stringify({
-        model: currentModelId,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
-        ],
-        stream: true,
-        max_tokens: currentMaxTokens,
-        temperature: 0.6,
-        include_reasoning: true,
-      }),
-    });
-  } catch (netErr) {
-    console.warn('[aura] Direct compute pipeline network issue, falling back to local synthesis:', netErr);
-    return fallbackToLocalSynthesis(prompt, callbacks);
-  }
+  let response: Response | null = null;
 
-  // Intelligent resilience for token budget, rate limits, or capacity constraints
-  if (!response.ok && (response.status === 402 || response.status === 429 || response.status >= 500)) {
-    const errorText = await response.text();
-    console.warn('[aura] Upstream compute capacity alert, calibrating route:', response.status, errorText);
+  for (let i = 0; i < candidateModels.length; i++) {
+    const candidateId = candidateModels[i];
+    try {
+      const res = await fetch(OPENROUTER_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
+          'X-Title': 'Aura Autonomous Studio',
+        },
+        body: JSON.stringify({
+          model: candidateId,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt },
+          ],
+          stream: true,
+          max_tokens: i === 0 ? currentMaxTokens : Math.min(currentMaxTokens, 8000),
+          temperature: 0.55,
+          include_reasoning: true,
+        }),
+      });
 
-    const affordMatch = errorText.match(/can only afford (\d+)/i);
-    if (affordMatch && parseInt(affordMatch[1], 10) > 300) {
-      currentMaxTokens = Math.max(300, parseInt(affordMatch[1], 10) - 20);
-      callbacks.onReasoning?.(`Calibrating compute pipeline for optimal response latency...`);
-      try {
-        response = await fetch(OPENROUTER_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
-            'X-Title': 'Aura Autonomous Studio',
-          },
-          body: JSON.stringify({
-            model: currentModelId,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: prompt },
-            ],
-            stream: true,
-            max_tokens: currentMaxTokens,
-            temperature: 0.6,
-            include_reasoning: true,
-          }),
-        });
-      } catch {}
-    } else if (!currentModelId.endsWith(':free')) {
-      currentModelId = `${currentModelId}:free`;
-      callbacks.onReasoning?.(`Engaging high-throughput Aura Autonomous pipeline...`);
-      try {
-        response = await fetch(OPENROUTER_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aura.build',
-            'X-Title': 'Aura Autonomous Studio',
-          },
-          body: JSON.stringify({
-            model: currentModelId,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: prompt },
-            ],
-            stream: true,
-            max_tokens: 4000,
-            temperature: 0.6,
-            include_reasoning: true,
-          }),
-        });
-      } catch {}
+      if (res.ok && res.body) {
+        response = res;
+        break;
+      }
+
+      const errorText = await res.text().catch(() => '');
+      const affordMatch = errorText.match(/can only afford (\d+)/i);
+      if (affordMatch && parseInt(affordMatch[1], 10) > 600) {
+        currentMaxTokens = Math.max(600, parseInt(affordMatch[1], 10) - 30);
+      }
+      callbacks.onReasoning?.('Calibrating autonomous compute cluster for optimal throughput...\n');
+    } catch (netErr) {
+      console.warn('[aura] Compute route retry:', netErr);
     }
   }
 
-  if (!response.ok || !response.body) {
-    console.warn('[aura] Upstream returned non-ok status, seamlessly activating autonomous synthesis fallback.');
+  if (!response || !response.ok || !response.body) {
     return fallbackToLocalSynthesis(prompt, callbacks);
   }
 
@@ -375,8 +347,15 @@ async function fallbackToLocalSynthesis(
     (promptTokens * model.inputPerM) / 1e6 + (completionTokens * model.outputPerM) / 1e6;
   const costUsd = reportedCostUsd !== null ? reportedCostUsd : computedCostUsd;
 
-  // Extract HTML from text
+  // Extract HTML from text and verify structural completeness
   const extractedHtml = extractHtml(fullText);
+  if (
+    !extractedHtml ||
+    extractedHtml.trim().length < 120 ||
+    (!extractedHtml.includes('<html') && !extractedHtml.includes('<!DOCTYPE') && !extractedHtml.includes('<body'))
+  ) {
+    return fallbackToLocalSynthesis(prompt, callbacks);
+  }
   const title = extractTitle(extractedHtml, prompt);
 
   return {

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { X, Key, ShieldCheck, Check, RotateCcw, Cpu, ExternalLink } from 'lucide-react';
+import { X, Key, ShieldCheck, Check, RotateCcw, Cpu, Sparkles, Sliders, Layers } from 'lucide-react';
 import { useAuth } from '@/lib/client/auth-context';
 
 interface SettingsModalProps {
@@ -28,6 +28,31 @@ export function SettingsModal({
   const initialKey = computeKey ?? openRouterKey ?? '';
   const [keyInput, setKeyInput] = useState(initialKey);
   const [savedFeedback, setSavedFeedback] = useState(false);
+  const [aiTemperature, setAiTemperature] = useState<number>(0.7);
+  const [componentDepth, setComponentDepth] = useState<number>(4);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTemp = localStorage.getItem('aura_ai_temperature');
+      if (savedTemp) setAiTemperature(parseFloat(savedTemp));
+      const savedDepth = localStorage.getItem('aura_ai_max_depth');
+      if (savedDepth) setComponentDepth(parseInt(savedDepth, 10));
+    }
+  }, []);
+
+  const handleTemperatureChange = (val: number) => {
+    setAiTemperature(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aura_ai_temperature', val.toString());
+    }
+  };
+
+  const handleDepthChange = (val: number) => {
+    setComponentDepth(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aura_ai_max_depth', val.toString());
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -103,7 +128,72 @@ export function SettingsModal({
           </div>
         </div>
 
-        {/* Section 2: Cashfree & Server Gateway Status */}
+        {/* Section 2: Autonomous Synthesis Engine Dynamic Sliders */}
+        <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800/80 space-y-4 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-white flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-sky-400" />
+              Autonomous Engine Tuning
+            </span>
+            <span className="text-[10px] font-mono text-zinc-500">
+              Live Hyperparameters
+            </span>
+          </div>
+
+          {/* AI Creativity / Temperature Slider */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-zinc-300 font-medium flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                Temperature / Creativity
+              </span>
+              <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-amber-300 border border-zinc-700">
+                {aiTemperature.toFixed(2)} · {aiTemperature <= 0.35 ? 'Deterministic' : aiTemperature <= 0.75 ? 'Balanced' : 'Creative'}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0.1"
+              max="1.0"
+              step="0.05"
+              value={aiTemperature}
+              onChange={(e) => handleTemperatureChange(parseFloat(e.target.value))}
+              className="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+            />
+            <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+              <span>0.1 (Strict Precision)</span>
+              <span>1.0 (Bold Discovery)</span>
+            </div>
+          </div>
+
+          {/* Component Nesting Depth Slider */}
+          <div className="space-y-1.5 pt-1 border-t border-zinc-800/60">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-zinc-300 font-medium flex items-center gap-1">
+                <Layers className="w-3 h-3 text-indigo-400" />
+                Component Decomposition Depth
+              </span>
+              <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-indigo-300 border border-zinc-700">
+                {componentDepth} Layers
+              </span>
+            </div>
+            <input
+              type="range"
+              min="2"
+              max="8"
+              step="1"
+              value={componentDepth}
+              onChange={(e) => handleDepthChange(parseInt(e.target.value, 10))}
+              className="w-full accent-indigo-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+            />
+            <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+              <span>2 (Flat Monolith)</span>
+              <span>8 (Deep Atomic Architecture)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Cashfree & Server Gateway Status */}
         <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800/80 space-y-2.5 text-xs">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-white flex items-center gap-1.5">

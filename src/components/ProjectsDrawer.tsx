@@ -34,29 +34,56 @@ export function ProjectsDrawer({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || !user) return;
+    if (!isOpen) return;
 
     const loadProjects = async () => {
       setLoading(true);
       try {
-        const token = await getToken();
-        if (!token) return;
+        let loadedProjects: ProjectSummary[] = [];
 
-        const res = await fetch('/api/projects', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          setProjects(await res.json());
-        }
+        if (user) {
+          const token = await getToken();
+          if (token) {
+            const res = await fetch('/api/projects', {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              loadedProjects = await res.json();
+            }
 
-        if (currentProjectId) {
-          const vRes = await fetch(`/api/projects/${currentProjectId}/versions`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (vRes.ok) {
-            setVersions(await vRes.json());
+            if (currentProjectId) {
+              const vRes = await fetch(`/api/projects/${currentProjectId}/versions`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (vRes.ok) {
+                setVersions(await vRes.json());
+              }
+            }
           }
         }
+
+        // Also merge local storage projects
+        try {
+          const localRaw = localStorage.getItem('aura_local_projects');
+          if (localRaw) {
+            const locals = JSON.parse(localRaw);
+            if (Array.isArray(locals)) {
+              locals.forEach((lp) => {
+                if (!loadedProjects.some((p) => p.id === lp.id || p.title === lp.title)) {
+                  loadedProjects.push({
+                    id: lp.id,
+                    title: lp.title,
+                    version: lp.version || 1,
+                    isPublic: false,
+                    updatedAt: lp.updatedAt || Date.now(),
+                  });
+                }
+              });
+            }
+          }
+        } catch {}
+
+        setProjects(loadedProjects);
       } catch (err) {
         console.warn('[aura] Error loading projects:', err);
       } finally {
@@ -66,6 +93,21 @@ export function ProjectsDrawer({
 
     loadProjects();
   }, [isOpen, user, currentProjectId, getToken]);
+
+  const handleDeleteProject = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      const localRaw = localStorage.getItem('aura_local_projects');
+      if (localRaw) {
+        const locals = JSON.parse(localRaw);
+        if (Array.isArray(locals)) {
+          const filtered = locals.filter((p: any) => p.id !== id);
+          localStorage.setItem('aura_local_projects', JSON.stringify(filtered));
+        }
+      }
+    } catch {}
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+  };
 
   if (!isOpen) return null;
 
@@ -130,30 +172,40 @@ export function ProjectsDrawer({
           {activeTab === 'projects' ? (
             projects.length === 0 ? (
               <div className="py-12 text-center text-xs text-zinc-500">
-                {user ? 'No saved projects yet. Generate an app to save it here!' : 'Sign in to access persistent projects.'}
+                No saved projects yet. Build an app to save it here!
               </div>
             ) : (
               projects.map((proj) => {
                 const isSelected = proj.id === currentProjectId;
                 return (
-                  <button
+                  <div
                     key={proj.id}
                     onClick={() => {
                       onSelectProject(proj.id);
                       onClose();
                     }}
-                    className={`w-full text-left p-3 rounded-xl border text-xs transition-all ${
+                    className={`w-full text-left p-3 rounded-xl border text-xs transition-all cursor-pointer group relative ${
                       isSelected
                         ? 'bg-amber-500/10 border-amber-500/30 text-white'
                         : 'bg-zinc-900/40 border-zinc-800/80 hover:bg-zinc-800/60 text-zinc-300'
                     }`}
                   >
-                    <div className="font-semibold truncate">{proj.title}</div>
+                    <div className="flex items-center justify-between pr-5">
+                      <div className="font-semibold truncate text-zinc-100">{proj.title}</div>
+                    </div>
                     <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-1 font-mono">
                       <span>v{proj.version}.0</span>
                       <span>{new Date(proj.updatedAt).toLocaleDateString()}</span>
                     </div>
-                  </button>
+
+                    <button
+                      onClick={(e) => handleDeleteProject(e, proj.id)}
+                      className="absolute right-2 top-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-zinc-800 text-zinc-500 hover:text-rose-400 transition-all cursor-pointer"
+                      title="Remove from workspace"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 );
               })
             )

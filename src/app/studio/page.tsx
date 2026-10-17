@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/client/auth-context';
 import { Navbar } from '@/components/Navbar';
@@ -14,8 +14,14 @@ import { ShareModal } from '@/components/ShareModal';
 import { ExportModal } from '@/components/ExportModal';
 import { ProjectsDrawer } from '@/components/ProjectsDrawer';
 import { AURA_ENGINE_DISPLAY } from '@/config/models';
-import { synthesizeAppFromPrompt } from '@/lib/templates';
+import {
+  synthesizeAppFromPrompt,
+  compileProjectFiles,
+  detectCategoryAndTitle,
+} from '@/lib/templates';
 import type { ChatMessage, GenerateEvent } from '@/types';
+
+const SESSION_STORAGE_KEY = 'aura_active_studio_session';
 
 function AuraStudioContent() {
   const { account, getToken, refreshAccount } = useAuth();
@@ -24,20 +30,25 @@ function AuraStudioContent() {
 
   // Project state
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
-  const [projectTitle, setProjectTitle] = useState(
-    initialPromptParam ? initialPromptParam.slice(0, 32) : 'Untitled App'
-  );
+  const [projectTitle, setProjectTitle] = useState(() => {
+    if (initialPromptParam && initialPromptParam.trim()) {
+      return detectCategoryAndTitle(initialPromptParam).title;
+    }
+    return 'Untitled App';
+  });
   const [version, setVersion] = useState(1);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [viewMode, setViewMode] = useState<'split' | 'preview' | 'code'>('split');
 
-  // Initial code: Only synthesize if a prompt query param is provided; otherwise start clean
+  // Initial HTML code & history stack for Undo/Redo
   const [htmlCode, setHtmlCode] = useState<string>(() => {
     if (initialPromptParam && initialPromptParam.trim().length > 0) {
       return synthesizeAppFromPrompt(initialPromptParam, AURA_ENGINE_DISPLAY.name).htmlCode;
     }
     return '';
   });
+  const [historyStack, setHistoryStack] = useState<string[]>(() => (htmlCode ? [htmlCode] : []));
+  const [historyIndex, setHistoryIndex] = useState<number>(() => (htmlCode ? 0 : -1));
 
   // Chat conversation stream
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -45,12 +56,127 @@ function AuraStudioContent() {
       id: 'msg_init',
       role: 'assistant',
       content: initialPromptParam
-        ? `Welcome to Aura! I've architected an initial high-fidelity prototype for "${initialPromptParam}". Tell me any revisions, components, or integrations you would like to add!`
-        : 'Welcome to Aura. Armed with our proprietary Autonomous Engine, I build production-grade, highly interactive web applications with full reactive state, dynamic metrics, local persistence, and zero fake placeholders. What would you like to build?',
-      createdAt: 0,
+        ? `Architected "${detectCategoryAndTitle(initialPromptParam).title}" with multi-view navigation, live computed KPIs, interactive modals, and LocalStorage persistence. Tell me any revisions, or use "Inspect & Edit" in the preview toolbar to modify elements directly!`
+        : 'Welcome to Aura Studio. Describe any full-stack web application or interactive website — or click a production blueprint below. Every build includes multi-view navigation, reactive state, SVG data visualizations, CRUD modals, and 6-file code export.',
+      createdAt: Date.now(),
       model: AURA_ENGINE_DISPLAY.name,
+      version: initialPromptParam ? 1 : undefined,
     },
   ]);
+
+  // Restore active studio session from localStorage if no URL prompt override
+  useEffect(() => {
+    if (initialPromptParam && initialPromptParam.trim().length > 0) return;
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved.htmlCode && typeof saved.htmlCode === 'string') {
+          setHtmlCode(saved.htmlCode);
+          setHistoryStack([saved.htmlCode]);
+          setHistoryIndex(0);
+        }
+        if (saved.projectTitle) setProjectTitle(saved.projectTitle);
+        if (saved.projectId) setProjectId(saved.projectId);
+        if (saved.version) setVersion(saved.version);
+        if (Array.isArray(saved.messages) && saved.messages.length > 0) {
+          setMessages(saved.messages);
+        }
+      }
+    } catch {}
+  }, [initialPromptParam]);
+
+  // Persist active session whenever htmlCode, title, or messages change
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({
+          projectId,
+          projectTitle,
+          version,
+          htmlCode,
+          messages: messages.slice(-30),
+        })
+      );
+
+      if (htmlCode && htmlCode.trim().length > 50) {
+        const raw = localStorage.getItem('aura_local_projects');
+        const list: any[] = raw ? JSON.parse(raw) : [];
+        const currentId = projectId || `proj_${(projectTitle || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
+        const existingIdx = list.findIndex((p: any) => p.id === currentId || p.title === projectTitle);
+        const item = {
+          id: currentId,
+          title: projectTitle,
+          version,
+          html: htmlCode,
+          updatedAt: Date.now(),
+          createdAt: existingIdx >= 0 ? list[existingIdx].createdAt : Date.now(),
+        };
+        if (existingIdx >= 0) {
+          list[existingIdx] = item;
+        } else {
+          list.unshift(item);
+        }
+        localStorage.setItem('aura_local_projects', JSON.stringify(list.slice(0, 25)));
+      }
+    } catch {}
+  }, [projectId, projectTitle, version, htmlCode, messages]);
+
+  const commitNewHtml = (nextHtml: string, nextTitle?: string, nextVersion?: number) => {
+    setHtmlCode(nextHtml);
+    if (nextTitle) setProjectTitle(nextTitle);
+    if (nextVersion !== undefined) setVersion(nextVersion);
+
+    setHistoryStack((prev) => {
+      const sliced = prev.slice(0, historyIndex + 1);
+      const updated = [...sliced, nextHtml].slice(-25);
+      setHistoryIndex(updated.length - 1);
+      return updated;
+    });
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const targetIdx = historyIndex - 1;
+      setHistoryIndex(targetIdx);
+      setHtmlCode(historyStack[targetIdx]);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < historyStack.length - 1) {
+      const targetIdx = historyIndex + 1;
+      setHistoryIndex(targetIdx);
+      setHtmlCode(historyStack[targetIdx]);
+    }
+  };
+
+  // Keyboard shortcuts (Undo: Ctrl+Z, Redo: Ctrl+Y / Ctrl+Shift+Z, Save/Export: Ctrl+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName);
+      if (isInput) return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        setIsExportOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [historyIndex, historyStack]);
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -83,20 +209,41 @@ function AuraStudioContent() {
     } catch {}
   };
 
-  // Switch to an existing project
+  // Switch to an existing project (supports both cloud and local guest projects)
   const handleSelectProject = async (id: string) => {
     try {
       const token = await getToken();
-      const res = await fetch(`/api/projects/${id}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (res.ok) {
-        const proj = await res.json();
-        setProjectId(proj.id);
-        setProjectTitle(proj.title);
-        setVersion(proj.version);
-        setHtmlCode(proj.html);
-        setMessages(proj.messages || []);
+      if (token) {
+        const res = await fetch(`/api/projects/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const proj = await res.json();
+          setProjectId(proj.id);
+          commitNewHtml(proj.html, proj.title, proj.version);
+          setMessages(proj.messages || []);
+          return;
+        }
+      }
+
+      // Check local storage for guest projects
+      const raw = localStorage.getItem('aura_local_projects');
+      if (raw) {
+        const list = JSON.parse(raw);
+        const found = list.find((p: any) => p.id === id);
+        if (found) {
+          setProjectId(found.id);
+          commitNewHtml(found.html, found.title, found.version);
+          setMessages([
+            {
+              id: `msg_load_${Date.now()}`,
+              role: 'assistant',
+              content: `Loaded "${found.title}" (v${found.version}). Describe any revisions or use the toolbar controls!`,
+              createdAt: Date.now(),
+              model: AURA_ENGINE_DISPLAY.name,
+            },
+          ]);
+        }
       }
     } catch (err) {
       console.warn('[aura] Failed to load project:', err);
@@ -109,11 +256,16 @@ function AuraStudioContent() {
     setProjectTitle('Untitled App');
     setVersion(1);
     setHtmlCode('');
+    setHistoryStack([]);
+    setHistoryIndex(-1);
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {}
     setMessages([
       {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: 'Canvas cleared. Describe the software or web app you want to build, or pick one of the architectural blueprints below!',
+        content: 'Canvas cleared. Describe the software or website you want to build, or select one of the architectural blueprints below!',
         createdAt: Date.now(),
         model: AURA_ENGINE_DISPLAY.name,
       },
@@ -130,8 +282,7 @@ function AuraStudioContent() {
       });
       if (res.ok) {
         const data = await res.json();
-        setHtmlCode(data.html);
-        setVersion(verNum);
+        commitNewHtml(data.html, undefined, verNum);
       }
     } catch (err) {
       console.warn('[aura] Failed to restore version:', err);
@@ -142,7 +293,6 @@ function AuraStudioContent() {
   const handleSendMessage = async (promptText: string) => {
     if (!promptText.trim() || isGenerating) return;
 
-    // Check account daily requests
     if (account && account.today.requests >= account.today.requestLimit) {
       setIsPricingOpen(true);
       return;
@@ -206,9 +356,10 @@ function AuraStudioContent() {
             } else if (event.type === 'delta') {
               setStreamingDelta((prev) => prev + event.text);
             } else if (event.type === 'done') {
-              setHtmlCode(event.html);
-              setVersion(event.version);
-              setProjectTitle(event.title);
+              if (event.projectId) {
+                setProjectId(event.projectId);
+              }
+              commitNewHtml(event.html, event.title, event.version);
               setMessages((prev) => [...prev, event.message]);
               await refreshAccount();
             } else if (event.type === 'error') {
@@ -229,17 +380,17 @@ function AuraStudioContent() {
       }
     } catch (err: any) {
       console.error('[aura] Generation error:', err);
-      // Fallback local synthesis
-      const fallback = synthesizeAppFromPrompt(promptText, AURA_ENGINE_DISPLAY.name);
-      setHtmlCode(fallback.htmlCode);
-      setVersion((v) => v + 1);
+      const fallback = synthesizeAppFromPrompt(promptText, AURA_ENGINE_DISPLAY.name, htmlCode);
+      const nextVer = htmlCode ? version + 1 : 1;
+      commitNewHtml(fallback.htmlCode, fallback.title, nextVer);
       setMessages((prev) => [
         ...prev,
         {
           id: `msg_fb_${Date.now()}`,
           role: 'assistant',
-          content: `Notice: Compiled intelligent autonomous client synthesis for "${promptText}".`,
+          content: fallback.thoughtSteps.join('\n'),
           createdAt: Date.now(),
+          version: nextVer,
           model: AURA_ENGINE_DISPLAY.name,
         },
       ]);
@@ -254,27 +405,25 @@ function AuraStudioContent() {
     handleSendMessage(`Surgically fix the following runtime issue in the application without breaking existing functionality: "${errorReport}"`);
   };
 
-  const files = [
-    {
-      name: 'index.html',
-      language: 'html',
-      content: htmlCode,
-    },
-    {
-      name: 'App.tsx',
-      language: 'typescript',
-      content: `// Aura Standalone React Component Export\n// Rendered live in index.html with Tailwind CSS & Lucide\nexport default function App() {\n  return (\n    <iframe srcDoc={htmlCode} className="w-full h-full border-0" />\n  );\n}`,
-    },
-    {
-      name: 'styles.css',
-      language: 'css',
-      content: `/* Aura Dark Mode Luxury Tokens */\n@layer base {\n  body { background-color: #09090b; color: #f4f4f5; }\n}`,
-    },
-  ];
+  const [inspectMode, setInspectMode] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
+
+  const handleOpenExternalPreview = () => {
+    if (!htmlCode) return;
+    const blob = new Blob([htmlCode], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  };
+
+  // Compile full 6-file production project tree from current HTML & title
+  const files = useMemo(() => {
+    const { category } = detectCategoryAndTitle(projectTitle);
+    return compileProjectFiles(htmlCode, projectTitle, projectTitle, category);
+  }, [htmlCode, projectTitle]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#09090b] text-white">
-      {/* Navbar */}
+      {/* Unified Studio Navbar */}
       <Navbar
         projectTitle={projectTitle}
         onUpdateTitle={setProjectTitle}
@@ -288,34 +437,42 @@ function AuraStudioContent() {
         onOpenExport={() => setIsExportOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenProjects={() => setIsProjectsOpen(true)}
+        onNewProject={handleNewProject}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < historyStack.length - 1}
         version={version}
+        inspectMode={inspectMode}
+        onToggleInspect={() => setInspectMode((v) => !v)}
+        onRefreshPreview={() => setIframeKey((k) => k + 1)}
+        onOpenExternalPreview={handleOpenExternalPreview}
+        hasCode={Boolean(htmlCode && htmlCode.trim().length > 0)}
       />
 
       {/* Main Workspace Dual-Pane */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Pane: Chat / Copilot */}
-        {(viewMode === 'split' || viewMode === 'code') && (
-          <div
-            className={`h-full transition-all duration-200 ${
-              viewMode === 'split' ? 'w-[420px] xl:w-[460px] shrink-0' : 'w-1/3 shrink-0'
-            }`}
-          >
-            <ChatPanel
-              messages={messages}
-              onSendMessage={handleSendMessage}
-              isGenerating={isGenerating}
-              onOpenPricing={() => setIsPricingOpen(true)}
-              streamingReasoning={streamingReasoning}
-              streamingDelta={streamingDelta}
-              onAutoFix={handleAutoFix}
-            />
-          </div>
-        )}
+        <div className="h-full w-[380px] xl:w-[400px] shrink-0">
+          <ChatPanel
+            messages={messages}
+            onSendMessage={handleSendMessage}
+            isGenerating={isGenerating}
+            onOpenPricing={() => setIsPricingOpen(true)}
+            streamingReasoning={streamingReasoning}
+            streamingDelta={streamingDelta}
+            onAutoFix={handleAutoFix}
+          />
+        </div>
 
-        {/* Right Pane: Sandbox or Code Inspector */}
-        <div className="flex-1 h-full overflow-hidden flex flex-col bg-black">
+        {/* Right Pane: Sandbox or Multi-File Code IDE */}
+        <div className="flex-1 h-full overflow-hidden flex flex-col bg-[#09090b]">
           {viewMode === 'code' ? (
-            <CodePanel files={files} title={projectTitle} />
+            <CodePanel
+              files={files}
+              title={projectTitle}
+              onUpdateHtml={(updated) => commitNewHtml(updated, undefined, version + 1)}
+            />
           ) : (
             <PreviewPanel
               htmlCode={htmlCode}
@@ -324,8 +481,12 @@ function AuraStudioContent() {
               onChangeViewport={setViewport}
               isGenerating={isGenerating}
               version={version}
+              inspectMode={inspectMode}
+              onCloseInspect={() => setInspectMode(false)}
+              iframeKey={iframeKey}
               onAutoFix={handleAutoFix}
               onSelectPrompt={handleSendMessage}
+              onUpdateHtml={(updated) => commitNewHtml(updated)}
             />
           )}
         </div>
@@ -352,7 +513,7 @@ function AuraStudioContent() {
           active: true,
           dailyRequestsUsed: account?.today.requests || 0,
           dailyRequestsLimit: account?.today.requestLimit || 15,
-          lastResetDate: '2026-10-11',
+          lastResetDate: '2026-10-16',
         }}
         onResetUsage={refreshAccount}
       />
@@ -361,6 +522,7 @@ function AuraStudioContent() {
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
         title={projectTitle}
+        projectId={projectId}
       />
 
       <ExportModal

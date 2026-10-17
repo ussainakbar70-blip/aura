@@ -150,6 +150,7 @@ export async function POST(req: Request) {
 
           sendEvent({
             type: 'done',
+            projectId: finalProjectId,
             version: finalVersion,
             title: finalTitle,
             message: asstMsg,
