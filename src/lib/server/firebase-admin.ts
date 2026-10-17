@@ -1,15 +1,19 @@
-import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
-import { getAuth, type Auth } from 'firebase-admin/auth';
-import { getFirestore, initializeFirestore, type Firestore } from 'firebase-admin/firestore';
+import type { App } from 'firebase-admin/app';
+import type { Auth } from 'firebase-admin/auth';
+import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { ApiError } from './errors';
 
 let app: App | undefined;
 let db: Firestore | undefined;
 
+// Lazy runtime require so Turbopack / Vercel never loads @grpc/grpc-js or protobufjs when Firebase Admin is unconfigured
+const dynamicRequire = (mod: string): any => {
+  return eval('require')(mod);
+};
+
 function readPrivateKey(): string | undefined {
   const raw = process.env.FIREBASE_PRIVATE_KEY;
   if (!raw) return undefined;
-  // Vercel / .env files usually store the key with literal "\n" and sometimes wrapped in quotes.
   return raw.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
 }
 
@@ -26,6 +30,7 @@ function getAdminApp(): App {
       'Aura is not fully configured yet (missing Firebase Admin credentials).',
     );
   }
+  const { cert, getApps, initializeApp } = dynamicRequire('firebase-admin/app');
   app =
     getApps()[0] ??
     initializeApp({
@@ -39,17 +44,25 @@ function getAdminApp(): App {
 }
 
 export function adminAuth(): Auth {
+  const { getAuth } = dynamicRequire('firebase-admin/auth');
   return getAuth(getAdminApp());
 }
 
 export function adminDb(): Firestore {
   if (db) return db;
   const a = getAdminApp();
-  db = getFirestore(a);
+  const { getFirestore } = dynamicRequire('firebase-admin/firestore');
+  const instance: Firestore = getFirestore(a);
   try {
-    db.settings({ ignoreUndefinedProperties: true });
+    instance.settings({ ignoreUndefinedProperties: true });
   } catch {
     // settings already frozen on re-use
   }
-  return db;
+  db = instance;
+  return instance;
+}
+
+export function adminFieldValue(): typeof FieldValue {
+  const { FieldValue: FV } = dynamicRequire('firebase-admin/firestore');
+  return FV;
 }

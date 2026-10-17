@@ -1,5 +1,5 @@
-import { FieldValue, type Transaction } from 'firebase-admin/firestore';
-import { adminDb, isAdminConfigured } from './firebase-admin';
+import type { Transaction } from 'firebase-admin/firestore';
+import { adminDb, adminFieldValue, isAdminConfigured } from './firebase-admin';
 import { ApiError } from './errors';
 import type { AuthUser } from './auth';
 import {
@@ -298,11 +298,12 @@ export async function settleGeneration({ reservation, actualCredits, refundReque
   const { uid, day, holdCredits } = reservation;
   const delta = actualCredits - holdCredits;
   const now = Date.now();
+  const FV = adminFieldValue();
   const batch = adminDb().batch();
-  batch.set(usersCol().doc(uid), { periodUsed: FieldValue.increment(delta), updatedAt: now }, { merge: true });
+  batch.set(usersCol().doc(uid), { periodUsed: FV.increment(delta), updatedAt: now }, { merge: true });
   batch.set(
     dailyRef(uid, day),
-    { credits: FieldValue.increment(delta), ...(refundRequest ? { requests: FieldValue.increment(-1) } : {}) },
+    { credits: FV.increment(delta), ...(refundRequest ? { requests: FV.increment(-1) } : {}) },
     { merge: true },
   );
   batch.set(usersCol().doc(uid).collection('ledger').doc(), {
