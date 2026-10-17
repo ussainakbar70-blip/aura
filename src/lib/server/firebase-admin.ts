@@ -31,7 +31,7 @@ function getAdminApp(): App {
     );
   }
   const { cert, getApps, initializeApp } = dynamicRequire('firebase-admin/app');
-  app =
+  const instance: App =
     getApps()[0] ??
     initializeApp({
       credential: cert({
@@ -40,7 +40,8 @@ function getAdminApp(): App {
         privateKey: readPrivateKey(),
       }),
     });
-  return app;
+  app = instance;
+  return instance;
 }
 
 export function adminAuth(): Auth {
