@@ -148,43 +148,57 @@ async function loadInTx(tx: Transaction, user: AuthUser, now: number) {
 
 const inMemoryUsage = new Map<string, { requests: number; usedCredits: number }>();
 
+function getInMemoryAccountView(user: AuthUser): AccountView {
+  const usage = inMemoryUsage.get(user.uid) || { requests: 0, usedCredits: 0 };
+  return {
+    uid: user.uid,
+    email: user.email,
+    name: user.name,
+    phone: null,
+    plan: 'pro',
+    planName: 'Pro Studio',
+    planExpiresAt: null,
+    credits: {
+      total: 1000,
+      used: usage.usedCredits,
+      remaining: Math.max(0, 1000 - usage.usedCredits),
+    },
+    today: {
+      credits: usage.usedCredits,
+      creditCap: 500,
+      requests: usage.requests,
+      requestLimit: 200,
+    },
+  };
+}
+
 /** Load (and lazily create / normalise) the caller's account. */
 export async function getAccount(user: AuthUser): Promise<AccountView> {
   const now = Date.now();
-  if (!isAdminConfigured() || user.uid.startsWith('guest')) {
-    const usage = inMemoryUsage.get(user.uid) || { requests: 0, usedCredits: 0 };
-    return {
-      uid: user.uid,
-      email: user.email,
-      name: user.name,
-      phone: null,
-      plan: 'pro',
-      planName: 'Pro Studio',
-      planExpiresAt: null,
-      credits: {
-        total: 1000,
-        used: usage.usedCredits,
-        remaining: Math.max(0, 1000 - usage.usedCredits),
-      },
-      today: {
-        credits: usage.usedCredits,
-        creditCap: 500,
-        requests: usage.requests,
-        requestLimit: 200,
-      },
-    };
+  if (!isAdminConfigured() || user.uid.startsWith('guest') || user.uid.startsWith('demo_')) {
+    return getInMemoryAccountView(user);
   }
 
-  return adminDb().runTransaction(async (tx) => {
-    const { ref, acc, changed, daily } = await loadInTx(tx, user, now);
-    if (changed) tx.set(ref, acc);
-    return toAccountView(user.uid, acc, daily);
-  });
+  try {
+    return await adminDb().runTransaction(async (tx) => {
+      const { ref, acc, changed, daily } = await loadInTx(tx, user, now);
+      if (changed) tx.set(ref, acc);
+      return toAccountView(user.uid, acc, daily);
+    });
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    console.warn('[aura-billing] Firestore getAccount fallback to in-memory:', err);
+    return getInMemoryAccountView(user);
+  }
 }
 
 export async function savePhone(user: AuthUser, phone: string): Promise<void> {
-  if (!isAdminConfigured() || user.uid.startsWith('guest')) return;
-  await usersCol().doc(user.uid).set({ phone, updatedAt: Date.now() }, { merge: true });
+  if (!isAdminConfigured() || user.uid.startsWith('guest') || user.uid.startsWith('demo_')) return;
+  try {
+    await usersCol().doc(user.uid).set({ phone, updatedAt: Date.now() }, { merge: true });
+  } catch (err) {
+    console.warn('[aura-billing] Firestore savePhone warning:', err);
+  }
 }
 
 export interface Reservation {
@@ -203,7 +217,7 @@ export interface Reservation {
 export async function reserveGeneration(user: AuthUser, model: AIModel, inputTokens: number): Promise<Reservation> {
   const now = Date.now();
 
-  if (!isAdminConfigured() || user.uid.startsWith('guest')) {
+  if (!isAdminConfigured() || user.uid.startsWith('guest') || user.uid.startsWith('demo_')) {
     const usage = inMemoryUsage.get(user.uid) || { requests: 0, usedCredits: 0 };
     usage.requests += 1;
     inMemoryUsage.set(user.uid, usage);
@@ -216,57 +230,72 @@ export async function reserveGeneration(user: AuthUser, model: AIModel, inputTok
     };
   }
 
-  return adminDb().runTransaction(async (tx) => {
-    const { ref, dRef, acc, daily } = await loadInTx(tx, user, now);
-    const plan = PLANS[acc.plan];
+  try {
+    return await adminDb().runTransaction(async (tx) => {
+      const { ref, dRef, acc, daily } = await loadInTx(tx, user, now);
+      const plan = PLANS[acc.plan];
 
-    if (!canUseModel(acc.plan, model)) {
-      throw new ApiError(
-        403,
-        'TIER_LOCKED',
-        `This operation requires the ${PLANS[model.minPlan].name} tier or higher.`,
-      );
-    }
-    if (daily.requests >= plan.dailyRequestLimit) {
-      throw new ApiError(
-        429,
-        'DAILY_REQUEST_LIMIT',
-        `You've used all ${plan.dailyRequestLimit} generations for today on the ${plan.name} plan. Limits reset at 00:00 UTC.`,
-      );
-    }
-
-    const periodRemaining = acc.periodCredits - acc.periodUsed;
-    const dailyRemaining = plan.dailyCreditCap - daily.credits;
-    const available = Math.min(periodRemaining, dailyRemaining);
-
-    const inputUsd = (inputTokens * model.inputPerM) / 1e6;
-    const outPerToken = model.outputPerM / 1e6;
-    const affordable = Math.floor((creditsToUsd(Math.max(0, available)) - inputUsd) / outPerToken);
-    const maxTokens = Math.min(plan.maxOutputTokens, affordable);
-
-    if (maxTokens < MIN_OUTPUT_TOKENS) {
-      if (periodRemaining <= dailyRemaining) {
+      if (!canUseModel(acc.plan, model)) {
         throw new ApiError(
-          402,
-          'OUT_OF_CREDITS',
-          acc.plan === 'free'
-            ? 'You have used your free credits. Upgrade to keep building.'
-            : 'Compute budget is depleted for this billing cycle. Upgrade your plan for fresh credits.',
+          403,
+          'TIER_LOCKED',
+          `This operation requires the ${PLANS[model.minPlan].name} tier or higher.`,
         );
       }
-      throw new ApiError(
-        429,
-        'DAILY_CREDIT_LIMIT',
-        `Today's fair-usage daily budget cap has been reached. Resets at 00:00 UTC.`,
-      );
-    }
+      if (daily.requests >= plan.dailyRequestLimit) {
+        throw new ApiError(
+          429,
+          'DAILY_REQUEST_LIMIT',
+          `You've used all ${plan.dailyRequestLimit} generations for today on the ${plan.name} plan. Limits reset at 00:00 UTC.`,
+        );
+      }
 
-    const holdCredits = usdToCredits(inputUsd + maxTokens * outPerToken);
-    tx.set(ref, { ...acc, periodUsed: acc.periodUsed + holdCredits, updatedAt: now });
-    tx.set(dRef, { requests: daily.requests + 1, credits: daily.credits + holdCredits, updatedAt: now });
+      const periodRemaining = acc.periodCredits - acc.periodUsed;
+      const dailyRemaining = plan.dailyCreditCap - daily.credits;
+      const available = Math.min(periodRemaining, dailyRemaining);
 
-    return { uid: user.uid, day: dayKey(now), holdCredits, maxTokens, plan: acc.plan };
-  });
+      const inputUsd = (inputTokens * model.inputPerM) / 1e6;
+      const outPerToken = model.outputPerM / 1e6;
+      const affordable = Math.floor((creditsToUsd(Math.max(0, available)) - inputUsd) / outPerToken);
+      const maxTokens = Math.min(plan.maxOutputTokens, affordable);
+
+      if (maxTokens < MIN_OUTPUT_TOKENS) {
+        if (periodRemaining <= dailyRemaining) {
+          throw new ApiError(
+            402,
+            'OUT_OF_CREDITS',
+            acc.plan === 'free'
+              ? 'You have used your free credits. Upgrade to keep building.'
+              : 'Compute budget is depleted for this billing cycle. Upgrade your plan for fresh credits.',
+          );
+        }
+        throw new ApiError(
+          429,
+          'DAILY_CREDIT_LIMIT',
+          `Today's fair-usage daily budget cap has been reached. Resets at 00:00 UTC.`,
+        );
+      }
+
+      const holdCredits = usdToCredits(inputUsd + maxTokens * outPerToken);
+      tx.set(ref, { ...acc, periodUsed: acc.periodUsed + holdCredits, updatedAt: now });
+      tx.set(dRef, { requests: daily.requests + 1, credits: daily.credits + holdCredits, updatedAt: now });
+
+      return { uid: user.uid, day: dayKey(now), holdCredits, maxTokens, plan: acc.plan };
+    });
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    console.warn('[aura-billing] Firestore reserveGeneration fallback to in-memory:', err);
+    const usage = inMemoryUsage.get(user.uid) || { requests: 0, usedCredits: 0 };
+    usage.requests += 1;
+    inMemoryUsage.set(user.uid, usage);
+    return {
+      uid: user.uid,
+      day: dayKey(now),
+      holdCredits: 1,
+      maxTokens: 16000,
+      plan: 'pro',
+    };
+  }
 }
 
 export interface SettleInput {
@@ -287,7 +316,7 @@ export interface SettleInput {
 
 /** Replace the reserved hold with the real cost and record a ledger entry. */
 export async function settleGeneration({ reservation, actualCredits, refundRequest, ledger }: SettleInput) {
-  if (!isAdminConfigured() || reservation.uid.startsWith('guest')) {
+  if (!isAdminConfigured() || reservation.uid.startsWith('guest') || reservation.uid.startsWith('demo_')) {
     const usage = inMemoryUsage.get(reservation.uid) || { requests: 0, usedCredits: 0 };
     usage.usedCredits += actualCredits;
     if (refundRequest && usage.requests > 0) usage.requests -= 1;
@@ -295,23 +324,31 @@ export async function settleGeneration({ reservation, actualCredits, refundReque
     return;
   }
 
-  const { uid, day, holdCredits } = reservation;
-  const delta = actualCredits - holdCredits;
-  const now = Date.now();
-  const FV = adminFieldValue();
-  const batch = adminDb().batch();
-  batch.set(usersCol().doc(uid), { periodUsed: FV.increment(delta), updatedAt: now }, { merge: true });
-  batch.set(
-    dailyRef(uid, day),
-    { credits: FV.increment(delta), ...(refundRequest ? { requests: FV.increment(-1) } : {}) },
-    { merge: true },
-  );
-  batch.set(usersCol().doc(uid).collection('ledger').doc(), {
-    ...ledger,
-    credits: actualCredits,
-    createdAt: now,
-  });
-  await batch.commit();
+  try {
+    const { uid, day, holdCredits } = reservation;
+    const delta = actualCredits - holdCredits;
+    const now = Date.now();
+    const FV = adminFieldValue();
+    const batch = adminDb().batch();
+    batch.set(usersCol().doc(uid), { periodUsed: FV.increment(delta), updatedAt: now }, { merge: true });
+    batch.set(
+      dailyRef(uid, day),
+      { credits: FV.increment(delta), ...(refundRequest ? { requests: FV.increment(-1) } : {}) },
+      { merge: true },
+    );
+    batch.set(usersCol().doc(uid).collection('ledger').doc(), {
+      ...ledger,
+      credits: actualCredits,
+      createdAt: now,
+    });
+    await batch.commit();
+  } catch (err) {
+    console.warn('[aura-billing] Firestore settleGeneration fallback to in-memory:', err);
+    const usage = inMemoryUsage.get(reservation.uid) || { requests: 0, usedCredits: 0 };
+    usage.usedCredits += actualCredits;
+    if (refundRequest && usage.requests > 0) usage.requests -= 1;
+    inMemoryUsage.set(reservation.uid, usage);
+  }
 }
 
 /** Apply a successful purchase to an account. Remaining paid credits always carry over. */

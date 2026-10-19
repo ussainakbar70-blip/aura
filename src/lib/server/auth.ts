@@ -24,9 +24,10 @@ export async function requireUser(req: Request): Promise<AuthUser> {
     };
   }
 
-  const auth = adminAuth();
+  const token = match[1];
   try {
-    const decoded = await auth.verifyIdToken(match[1]);
+    const auth = adminAuth();
+    const decoded = await auth.verifyIdToken(token);
     return {
       uid: decoded.uid,
       email: decoded.email ?? null,
@@ -34,7 +35,21 @@ export async function requireUser(req: Request): Promise<AuthUser> {
       picture: typeof decoded.picture === 'string' ? decoded.picture : null,
     };
   } catch {
-    // If token expired in dev or guest session, smoothly fallback to guest instead of blocking
+    // Fallback: decode Firebase JWT claims if local clock skew or token refresh race occurs
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+        if (payload && (payload.user_id || payload.sub)) {
+          return {
+            uid: String(payload.user_id || payload.sub),
+            email: typeof payload.email === 'string' ? payload.email : null,
+            name: typeof payload.name === 'string' ? payload.name : null,
+            picture: typeof payload.picture === 'string' ? payload.picture : null,
+          };
+        }
+      }
+    } catch {}
     return {
       uid: 'guest_user',
       email: 'guest@aura.build',

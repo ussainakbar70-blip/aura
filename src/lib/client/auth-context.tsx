@@ -167,9 +167,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setIsDemoMode(false);
       if (currentUser) {
+        try {
+          localStorage.removeItem('aura_demo_user');
+        } catch {}
+        setUser(currentUser);
+        setIsDemoMode(false);
         try {
           const token = await currentUser.getIdToken();
           const res = await fetch('/api/account', {
@@ -179,10 +182,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setAccount(await res.json());
           }
         } catch {
-          setAccount(defaultAccountView);
+          setAccount({
+            ...defaultAccountView,
+            uid: currentUser.uid,
+            email: currentUser.email,
+            name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Aura Builder',
+          });
         }
       } else {
-        setAccount(defaultAccountView);
+        // Check if user is in explicit demo session
+        try {
+          const stored = localStorage.getItem('aura_demo_user');
+          if (!stored) {
+            setUser(null);
+            setIsDemoMode(false);
+            setAccount(defaultAccountView);
+          }
+        } catch {
+          setUser(null);
+          setIsDemoMode(false);
+          setAccount(defaultAccountView);
+        }
       }
       setLoading(false);
     });
@@ -193,39 +213,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     const auth = getClientAuth();
     if (!auth) {
-      // Graceful fallback for preview before Firebase setup
       demoSignIn('google.user@aura.build', 'Google Demo User');
       return;
     }
-    await signInWithPopup(auth, googleProvider);
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      if (cred.user) {
+        try {
+          localStorage.removeItem('aura_demo_user');
+        } catch {}
+        setUser(cred.user);
+        setIsDemoMode(false);
+      }
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        throw new Error('Google sign-in window was closed before completing.');
+      }
+      throw err;
+    }
   };
 
   const signInWithEmail = async (e: string, p: string) => {
     const auth = getClientAuth();
     if (!auth) {
-      // Fallback demo sign in so user can test before Firebase credentials are added
       const inferredName = e.split('@')[0].replace(/[._]/g, ' ');
       const capitalized = inferredName.charAt(0).toUpperCase() + inferredName.slice(1);
       demoSignIn(e, capitalized || 'Aura Developer');
       return;
     }
-    await signInWithEmailAndPassword(auth, e, p);
+    const cred = await signInWithEmailAndPassword(auth, e, p);
+    if (cred.user) {
+      try {
+        localStorage.removeItem('aura_demo_user');
+      } catch {}
+      setUser(cred.user);
+      setIsDemoMode(false);
+    }
   };
 
   const signUpWithEmail = async (e: string, p: string, displayName?: string) => {
     const auth = getClientAuth();
     if (!auth) {
-      // Fallback demo sign up
       demoSignIn(e, displayName || 'New Builder');
       return;
     }
     const cred = await createUserWithEmailAndPassword(auth, e, p);
-    if (displayName && cred.user) {
-      try {
-        await updateProfile(cred.user, { displayName });
-      } catch (err) {
-        console.warn('[aura] Could not set display name:', err);
+    if (cred.user) {
+      if (displayName) {
+        try {
+          await updateProfile(cred.user, { displayName });
+        } catch (err) {
+          console.warn('[aura] Could not set display name:', err);
+        }
       }
+      try {
+        localStorage.removeItem('aura_demo_user');
+      } catch {}
+      setUser(cred.user);
+      setIsDemoMode(false);
     }
   };
 
