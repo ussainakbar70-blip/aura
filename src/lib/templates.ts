@@ -1639,12 +1639,665 @@ function buildDomainApplicationHtml(cfg: DomainConfig, prompt: string): string {
 </html>`;
 }
 
+function buildRealEstateWebsiteHtml(title: string, prompt: string): string {
+  return `<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title} | Luxury Real Estate &amp; Iconic Developments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body { font-family: 'Inter', -apple-system, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    html[data-theme="light"] body { filter: invert(0.94) hue-rotate(180deg); background: #fff; }
+  </style>
+</head>
+<body class="bg-[#09090b] text-zinc-100 min-h-screen flex flex-col antialiased selection:bg-amber-400 selection:text-black">
+
+  <!-- Ambient Architectural Gold Glow -->
+  <div class="fixed top-0 left-1/3 w-[650px] h-[360px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+  <div class="fixed bottom-0 right-1/4 w-[500px] h-[360px] bg-emerald-500/5 rounded-full blur-[140px] pointer-events-none"></div>
+
+  <!-- Sticky Luxury Navigation -->
+  <header class="sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/85 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 flex items-center justify-center text-black font-black text-sm shadow-md">
+          ${title.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <span class="font-extrabold text-base tracking-tight text-white uppercase">${title}</span>
+          <span class="hidden sm:block text-[10px] font-mono text-amber-300/90 uppercase tracking-widest">Global Luxury Real Estate</span>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-7 text-xs font-medium text-zinc-400">
+        <button type="button" onclick="scrollToSection('residences')" class="hover:text-amber-300 transition-colors cursor-pointer">Signature Residences</button>
+        <button type="button" onclick="scrollToSection('communities')" class="hover:text-amber-300 transition-colors cursor-pointer">Master Communities</button>
+        <button type="button" onclick="scrollToSection('mortgage-calculator')" class="hover:text-amber-300 transition-colors cursor-pointer">Payment &amp; Mortgage</button>
+        <button type="button" onclick="scrollToSection('faq')" class="hover:text-amber-300 transition-colors cursor-pointer">Investor FAQ</button>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="openAddPropertyModal()" class="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-zinc-300 hover:text-white transition-all cursor-pointer">
+          <i data-lucide="plus" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>List Property</span>
+        </button>
+        <button type="button" onclick="exportPortfolioCsv()" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-zinc-300 hover:text-white transition-all cursor-pointer">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Brochure CSV</span>
+        </button>
+        <button type="button" onclick="toggleTheme()" class="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer" title="Switch Theme">
+          <i data-lucide="sun-moon" class="w-4 h-4"></i>
+        </button>
+        <button type="button" onclick="openViewingModal()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/10 cursor-pointer">
+          <span>Book Private Viewing</span>
+          <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Architectural Hero Showcase -->
+  <section class="relative pt-12 pb-16 px-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-7 space-y-6">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Iconic Master-Planned Developments • Direct Developer Release</span>
+      </div>
+      <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.06]">
+        Timeless Architectural Living by <span class="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">${title}</span>
+      </h1>
+      <p class="text-sm sm:text-base text-zinc-400 max-w-xl leading-relaxed">
+        Discover ultra-luxury waterfront mansions, sky penthouses, and championship golf estates engineered for generational wealth, world-class hospitality, and high-yield capital appreciation.
+      </p>
+      <div class="flex flex-wrap items-center gap-3 pt-1">
+        <button type="button" onclick="scrollToSection('residences')" class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer">
+          <span>Explore Signature Residences</span>
+          <i data-lucide="building-2" class="w-4 h-4"></i>
+        </button>
+        <button type="button" onclick="scrollToSection('mortgage-calculator')" class="px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-semibold text-xs flex items-center gap-2 cursor-pointer">
+          <span>80/20 Payment &amp; Mortgage Calculator</span>
+          <i data-lucide="calculator" class="w-4 h-4 text-amber-400"></i>
+        </button>
+      </div>
+      <div class="grid grid-cols-3 gap-4 pt-6 border-t border-zinc-800/80">
+        <div><div class="text-2xl font-extrabold text-white font-mono">$28.4B+</div><div class="text-xs text-zinc-400">Delivered Portfolio</div></div>
+        <div><div class="text-2xl font-extrabold text-amber-400 font-mono">8.7%</div><div class="text-xs text-zinc-400">Avg. Net Rental Yield</div></div>
+        <div><div class="text-2xl font-extrabold text-emerald-400 font-mono">115,000+</div><div class="text-xs text-zinc-400">Residences Handed Over</div></div>
+      </div>
+    </div>
+
+    <!-- Hero Featured Residence Card -->
+    <div class="lg:col-span-5 bg-zinc-900/70 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
+      <div class="relative h-64 overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80" alt="Signature Villa" class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent"></div>
+        <span class="absolute top-4 left-4 px-3 py-1 rounded-full bg-black/75 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[11px] font-semibold">
+          Flagship Release • Downtown &amp; Waterfront
+        </span>
+        <span class="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md text-emerald-300 border border-emerald-500/30 text-[11px] font-mono">
+          Golden Visa Eligible
+        </span>
+        <div class="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+          <div>
+            <div class="text-xs text-amber-300 font-mono">THE SOVEREIGN SKY PENTHOUSE</div>
+            <div class="text-xl font-extrabold text-white">Downtown Opera District</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] text-zinc-400">Starting From</div>
+            <div class="text-lg font-extrabold text-amber-400 font-mono">$6,800,000</div>
+          </div>
+        </div>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-3 gap-2 text-center bg-zinc-950/80 border border-zinc-800/80 rounded-2xl p-3 text-xs">
+          <div><div class="font-bold text-white">5 Beds</div><div class="text-[10px] text-zinc-500">+ Private Pool</div></div>
+          <div><div class="font-bold text-white">8,450 Sq.Ft</div><div class="text-[10px] text-zinc-500">Duplex Layout</div></div>
+          <div><div class="font-bold text-emerald-400">80/20 Plan</div><div class="text-[10px] text-zinc-500">Q4 Handover</div></div>
+        </div>
+        <button type="button" onclick="openViewingModal('The Sovereign Sky Penthouse')" class="w-full py-3 rounded-xl bg-white hover:bg-zinc-200 text-black font-bold text-xs transition-all cursor-pointer">
+          Request Private Floorplan &amp; Chauffeur Tour
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Property Search, Filter & Portfolio Grid -->
+  <section id="residences" class="py-12 px-6 max-w-7xl mx-auto w-full space-y-6">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <span class="text-xs font-mono uppercase tracking-widest text-amber-400">Curated Collection</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Exclusive Residences &amp; Penthouses</h2>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs text-zinc-400">Saved Shortlist: <strong id="shortlistCount" class="text-amber-400 font-mono">0</strong></span>
+        <button type="button" onclick="openAddPropertyModal()" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-amber-300 font-semibold cursor-pointer">
+          + Add Residence
+        </button>
+      </div>
+    </div>
+
+    <!-- Multi-Criteria Search & Filter Bar -->
+    <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+      <div id="typeFilterPills" class="flex flex-wrap gap-1.5"></div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5"></i>
+          <input id="propSearchInput" type="text" oninput="renderProperties()" placeholder="Search community or title..." class="bg-zinc-950 border border-zinc-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white w-48 focus:outline-none focus:border-amber-400" />
+        </div>
+
+        <div class="flex items-center gap-2 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs">
+          <span class="text-zinc-400">Max Budget:</span>
+          <span id="maxBudgetLabel" class="font-mono font-bold text-amber-400 min-w-[68px]">$20.0M</span>
+          <input id="budgetSlider" type="range" min="1500000" max="20000000" step="500000" value="20000000" oninput="updateBudgetFilter(this.value)" class="w-24 accent-amber-400 cursor-pointer" />
+        </div>
+
+        <select id="propSortSelect" onchange="renderProperties()" class="bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-300">
+          <option value="featured">Sort: Featured</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="yield">Highest Rental Yield</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Property Listings Grid -->
+    <div id="propertiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </section>
+
+  <!-- Master-Planned Communities Showcase -->
+  <section id="communities" class="py-14 px-6 max-w-7xl mx-auto w-full space-y-6 border-t border-zinc-900">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div>
+        <span class="text-xs font-mono uppercase tracking-widest text-amber-400">Iconic Destinations</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Signature Master Communities</h2>
+      </div>
+      <p class="text-xs text-zinc-400 max-w-md">Click any master community below to filter residences located in that district.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div onclick="filterByCommunity('Downtown')" class="group relative h-52 rounded-2xl overflow-hidden border border-zinc-800 cursor-pointer">
+        <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Downtown" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4 flex flex-col justify-end">
+          <span class="text-[10px] font-mono text-amber-300">9.2% AVG ROI</span>
+          <h3 class="text-sm font-bold text-white">Downtown Boulevard</h3>
+          <p class="text-[11px] text-zinc-300">Sky Penthouses &amp; Opera Residences</p>
+        </div>
+      </div>
+      <div onclick="filterByCommunity('Beachfront')" class="group relative h-52 rounded-2xl overflow-hidden border border-zinc-800 cursor-pointer">
+        <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Beachfront" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4 flex flex-col justify-end">
+          <span class="text-[10px] font-mono text-emerald-300">PRIVATE MARINA ACCESS</span>
+          <h3 class="text-sm font-bold text-white">Private Beachfront</h3>
+          <p class="text-[11px] text-zinc-300">1.5km Pristine White Sand &amp; Yacht Club</p>
+        </div>
+      </div>
+      <div onclick="filterByCommunity('Hills')" class="group relative h-52 rounded-2xl overflow-hidden border border-zinc-800 cursor-pointer">
+        <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Hills Estate" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4 flex flex-col justify-end">
+          <span class="text-[10px] font-mono text-amber-300">18-HOLE CHAMPIONSHIP GOLF</span>
+          <h3 class="text-sm font-bold text-white">Emerald Hills Estate</h3>
+          <p class="text-[11px] text-zinc-300">Golf Course Mansions &amp; Botanical Parks</p>
+        </div>
+      </div>
+      <div onclick="filterByCommunity('Creek')" class="group relative h-52 rounded-2xl overflow-hidden border border-zinc-800 cursor-pointer">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Creek Harbour" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4 flex flex-col justify-end">
+          <span class="text-[10px] font-mono text-emerald-300">WATERFRONT PROMENADE</span>
+          <h3 class="text-sm font-bold text-white">Creek Harbour Island</h3>
+          <p class="text-[11px] text-zinc-300">Sanctuary Views &amp; Luxury Yacht Marina</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Mortgage & Developer Payment Plan Calculator -->
+  <section id="mortgage-calculator" class="py-16 bg-zinc-950/70 border-y border-zinc-900 px-6">
+    <div class="max-w-5xl mx-auto space-y-8">
+      <div class="text-center space-y-2">
+        <span class="text-xs font-mono uppercase tracking-widest text-amber-400">Bespoke Financial Structuring</span>
+        <h2 class="text-3xl font-extrabold text-white">Mortgage &amp; 80/20 Payment Plan Simulator</h2>
+        <p class="text-xs text-zinc-400">Model your monthly commitment, down payment, and projected 5-year capital appreciation.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8">
+        <div class="space-y-5">
+          <div>
+            <div class="flex justify-between text-xs mb-2">
+              <span class="text-zinc-300 font-medium">Property Valuation</span>
+              <span class="font-mono font-bold text-amber-400" id="mortPriceLabel">$3,500,000</span>
+            </div>
+            <input id="mortPriceSlider" type="range" min="750000" max="15000000" step="250000" value="3500000" oninput="calculateMortgage()" class="w-full accent-amber-400 cursor-pointer" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-2">
+              <span class="text-zinc-300 font-medium">Down Payment (<span id="mortDownPctLabel">20%</span>)</span>
+              <span class="font-mono font-bold text-emerald-400" id="mortDownAmtLabel">$700,000</span>
+            </div>
+            <input id="mortDownSlider" type="range" min="10" max="60" step="5" value="20" oninput="calculateMortgage()" class="w-full accent-emerald-400 cursor-pointer" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-2">
+              <span class="text-zinc-300 font-medium">Financing Horizon</span>
+              <span class="font-mono font-bold text-white" id="mortYearsLabel">20 Years (4.25% APR)</span>
+            </div>
+            <input id="mortYearsSlider" type="range" min="5" max="25" step="5" value="20" oninput="calculateMortgage()" class="w-full accent-amber-400 cursor-pointer" />
+          </div>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-zinc-950 border border-zinc-800 flex flex-col justify-between space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[11px] font-mono text-zinc-400">Estimated Monthly Payment</span>
+              <div class="text-3xl sm:text-4xl font-extrabold text-white font-mono mt-0.5" id="mortMonthlyResult">$17,338<span class="text-sm text-zinc-500 font-normal">/mo</span></div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] font-mono">Zero Commission</span>
+          </div>
+
+          <div class="w-full h-10">
+            <svg viewBox="0 0 280 36" class="w-full h-full">
+              <path d="M 0,32 Q 70,25 140,16 T 280,4" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="280" cy="4" r="4" fill="#10b981" />
+            </svg>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs">
+              <span class="text-zinc-400 block text-[10px]">Est. Annual Rental Income</span>
+              <span id="mortAnnualRent" class="font-mono font-bold text-emerald-400 text-sm">$297,500 / yr</span>
+            </div>
+            <div class="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs">
+              <span class="text-zinc-400 block text-[10px]">5-Yr Projected Valuation</span>
+              <span id="mortProjectedVal" class="font-mono font-bold text-amber-300 text-sm">$4,830,000</span>
+            </div>
+          </div>
+
+          <button type="button" onclick="openViewingModal('Custom Financing & Payment Schedule')" class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs cursor-pointer">
+            Lock In Developer 80/20 Payment Schedule
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Investor FAQ Accordion -->
+  <section id="faq" class="py-16 px-6 max-w-3xl mx-auto w-full space-y-6">
+    <h2 class="text-2xl font-extrabold text-white text-center">Global Investor &amp; Buyer FAQ</h2>
+    <div id="faqContainer" class="space-y-3"></div>
+  </section>
+
+  <!-- Private Viewing & Brochure Modal -->
+  <div id="viewingModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="bg-[#0e0e13] border border-zinc-800 rounded-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-white">Schedule Private Viewing</h3>
+          <p id="viewingPropertySubtitle" class="text-[11px] text-amber-400 font-mono">VIP Chauffeur or Live 4K Video Tour</p>
+        </div>
+        <button type="button" onclick="closeViewingModal()" class="text-zinc-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form onsubmit="submitViewingForm(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-zinc-300 mb-1">Full Name *</label>
+          <input id="leadName" required type="text" placeholder="Tariq Al-Mansoor" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-zinc-300 mb-1">Email *</label>
+            <input id="leadEmail" required type="email" placeholder="investor@domain.com" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-zinc-300 mb-1">Phone / WhatsApp *</label>
+            <input id="leadPhone" required type="tel" placeholder="+971 50 000 0000" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-zinc-300 mb-1">Viewing Preference</label>
+          <select id="leadTourType" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white">
+            <option>Private On-Site Chauffeur Viewing</option>
+            <option>Live 4K Virtual Presentation + Floorplans</option>
+            <option>Request Institutional Investor Dossier</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold cursor-pointer">Confirm VIP Appointment</button>
+      </form>
+      <div id="leadsList" class="pt-2 border-t border-zinc-800/80 text-[11px] text-zinc-400"></div>
+    </div>
+  </div>
+
+  <!-- Add New Property Modal -->
+  <div id="addPropertyModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <form onsubmit="saveNewProperty(event)" class="bg-[#0e0e13] border border-zinc-800 rounded-2xl max-w-md w-full p-6 space-y-3 text-xs">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+        <h3 class="text-sm font-bold text-white">List New Luxury Residence</h3>
+        <button type="button" onclick="closeAddPropertyModal()" class="text-zinc-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <input id="newPropTitle" required placeholder="Residence Title (e.g. Marina Vista Sky Villa)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white" />
+      <div class="grid grid-cols-2 gap-2">
+        <select id="newPropType" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white">
+          <option>Villas</option><option>Penthouses</option><option>Mansions</option><option>Waterfront</option>
+        </select>
+        <input id="newPropLocation" required placeholder="Community (e.g. Downtown)" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white" />
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <input id="newPropPrice" required type="number" placeholder="Price ($)" value="4200000" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white" />
+        <input id="newPropBeds" required type="number" placeholder="Beds" value="4" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white" />
+        <input id="newPropSqft" required type="number" placeholder="Sq.Ft" value="5400" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white" />
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeAddPropertyModal()" class="px-3 py-1.5 rounded-xl bg-zinc-900 text-zinc-400">Cancel</button>
+        <button type="submit" class="px-4 py-1.5 rounded-xl bg-amber-400 text-black font-bold">Publish Listing</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-zinc-900 border border-zinc-700 text-white text-xs px-4 py-3 rounded-xl shadow-2xl">
+    <span id="toastMsg">Saved!</span>
+  </div>
+
+  <script>
+    const seedResidences = [
+      { id: 'RES-101', title: 'The Address Opera Sky Penthouse', community: 'Downtown Boulevard', type: 'Penthouses', price: 6800000, beds: 5, baths: 6, sqft: 8450, yieldPct: 8.9, img: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=900&q=80', badge: 'Full Burj & Fountain View' },
+      { id: 'RES-102', title: 'Palm Signature Waterfront Villa', community: 'Private Beachfront', type: 'Waterfront', price: 12400000, beds: 6, baths: 7, sqft: 11200, yieldPct: 9.4, img: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=900&q=80', badge: 'Private Beach & Yacht Berth' },
+      { id: 'RES-103', title: 'Fairway Reserve Golf Mansion', community: 'Emerald Hills Estate', type: 'Mansions', price: 8900000, beds: 6, baths: 8, sqft: 10500, yieldPct: 8.4, img: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80', badge: 'Championship Golf Frontage' },
+      { id: 'RES-104', title: 'Creek Harbour Sanctuary Villa', community: 'Creek Harbour Island', type: 'Villas', price: 3250000, beds: 4, baths: 5, sqft: 4850, yieldPct: 9.1, img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80', badge: '80/20 Post-Handover Plan' },
+      { id: 'RES-105', title: 'Marina Promenade Duplex Residence', community: 'Private Beachfront', type: 'Penthouses', price: 4600000, beds: 4, baths: 5, sqft: 5600, yieldPct: 8.8, img: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=900&q=80', badge: 'Turnkey Designer Furnished' },
+      { id: 'RES-106', title: 'Parkway Botanical Garden Villa', community: 'Emerald Hills Estate', type: 'Villas', price: 2450000, beds: 4, baths: 4, sqft: 4120, yieldPct: 8.6, img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80', badge: 'High Capital Appreciation' }
+    ];
+
+    let residences = JSON.parse(localStorage.getItem('aura_realestate_listings') || 'null') || seedResidences;
+    let shortlist = JSON.parse(localStorage.getItem('aura_realestate_shortlist') || '[]');
+    let activeType = 'All';
+    let maxBudget = 20000000;
+    let selectedResidenceForViewing = 'Signature Portfolio';
+
+    const faqs = [
+      { q: 'What payment plans are available for off-plan and ready residences?', a: 'We offer flexible 80/20 and 60/40 developer payment plans with zero interest during construction, alongside bespoke private banking mortgage structures.' },
+      { q: 'Do property purchases qualify for the 10-Year UAE Golden Visa?', a: 'Yes. All residences valued above AED 2,000,000 ($545,000 USD) qualify the buyer and immediate family for a renewable 10-year residency visa handled by our VIP concierge.' },
+      { q: 'Are international buyer funds protected in regulated escrow accounts?', a: '100% of milestone payments are held in RERA-regulated project escrow accounts, ensuring institutional security and guaranteed construction delivery.' }
+    ];
+
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function updateBudgetFilter(val) {
+      maxBudget = Number(val);
+      document.getElementById('maxBudgetLabel').innerText = '$' + (maxBudget / 1000000).toFixed(1) + 'M';
+      renderProperties();
+    }
+
+    function filterByCommunity(keyword) {
+      const input = document.getElementById('propSearchInput');
+      if (input) input.value = keyword;
+      activeType = 'All';
+      renderProperties();
+      scrollToSection('residences');
+      showToast('Filtered residences in ' + keyword);
+    }
+
+    function toggleShortlist(id) {
+      if (shortlist.includes(id)) {
+        shortlist = shortlist.filter(x => x !== id);
+        showToast('Removed from shortlist');
+      } else {
+        shortlist.push(id);
+        showToast('Saved residence to shortlist');
+      }
+      localStorage.setItem('aura_realestate_shortlist', JSON.stringify(shortlist));
+      renderProperties();
+    }
+
+    function renderProperties() {
+      const types = ['All', 'Villas', 'Penthouses', 'Mansions', 'Waterfront'];
+      document.getElementById('typeFilterPills').innerHTML = types.map(t => \`
+        <button type="button" onclick="activeType='\${t}';renderProperties()" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer \${activeType === t ? 'bg-amber-400 text-black font-bold' : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-800'}">\${t}</button>
+      \`).join('');
+
+      document.getElementById('shortlistCount').innerText = shortlist.length;
+
+      const q = (document.getElementById('propSearchInput')?.value || '').toLowerCase();
+      const sort = document.getElementById('propSortSelect')?.value || 'featured';
+
+      let list = residences.filter(r =>
+        (activeType === 'All' || r.type === activeType) &&
+        (r.title.toLowerCase().includes(q) || r.community.toLowerCase().includes(q)) &&
+        r.price <= maxBudget
+      );
+
+      if (sort === 'price-asc') list.sort((a, b) => a.price - b.price);
+      if (sort === 'price-desc') list.sort((a, b) => b.price - a.price);
+      if (sort === 'yield') list.sort((a, b) => b.yieldPct - a.yieldPct);
+
+      if (list.length === 0) {
+        document.getElementById('propertiesGrid').innerHTML = \`
+          <div class="col-span-full py-16 text-center space-y-3 bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl">
+            <p class="text-xs text-zinc-400">No residences match your current filter criteria.</p>
+            <button type="button" onclick="activeType='All';document.getElementById('propSearchInput').value='';document.getElementById('budgetSlider').value=20000000;updateBudgetFilter(20000000)" class="px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer">Reset All Filters</button>
+          </div>
+        \`;
+        lucide.createIcons();
+        return;
+      }
+
+      document.getElementById('propertiesGrid').innerHTML = list.map(r => {
+        const isSaved = shortlist.includes(r.id);
+        return \`
+          <div class="bg-zinc-900/50 border border-zinc-800/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-amber-400/40 transition-all group">
+            <div>
+              <div class="relative h-52 overflow-hidden bg-zinc-950">
+                <img src="\${r.img}" alt="\${r.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent"></div>
+                <span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-amber-300 border border-amber-400/20 text-[10px] font-semibold">\${r.badge}</span>
+                <button type="button" onclick="toggleShortlist('\${r.id}')" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/75 backdrop-blur-md border border-zinc-700 flex items-center justify-center text-xs cursor-pointer \${isSaved ? 'text-rose-400 border-rose-500/40' : 'text-zinc-300 hover:text-white'}">
+                  \${isSaved ? '♥' : '♡'}
+                </button>
+                <span class="absolute bottom-3 right-3 px-2 py-0.5 rounded bg-emerald-500/20 backdrop-blur-md text-emerald-300 border border-emerald-500/30 text-[10px] font-mono">\${r.yieldPct}% Est. Yield</span>
+              </div>
+              <div class="p-5 space-y-2">
+                <div class="text-[11px] font-mono text-amber-400 uppercase">\${r.community} • \${r.type}</div>
+                <h3 class="text-sm font-bold text-white leading-snug">\${r.title}</h3>
+                <div class="flex items-center gap-4 text-xs text-zinc-400 pt-1">
+                  <span>\${r.beds} Beds</span>
+                  <span>•</span>
+                  <span>\${r.baths} Baths</span>
+                  <span>•</span>
+                  <span>\${Number(r.sqft).toLocaleString()} Sq.Ft</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-5 pt-3 border-t border-zinc-800/80 flex items-center justify-between">
+              <div>
+                <div class="text-[10px] text-zinc-500">Guide Price</div>
+                <div class="text-lg font-extrabold text-white font-mono">$\${Number(r.price).toLocaleString()}</div>
+              </div>
+              <button type="button" onclick="openViewingModal('\${r.title.replace(/'/g, '')}')" class="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-amber-400 hover:text-black text-white text-xs font-bold transition-all cursor-pointer">
+                Book Viewing
+              </button>
+            </div>
+          </div>
+        \`;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function calculateMortgage() {
+      const price = Number(document.getElementById('mortPriceSlider').value);
+      const downPct = Number(document.getElementById('mortDownSlider').value);
+      const years = Number(document.getElementById('mortYearsSlider').value);
+      const downAmt = Math.round(price * (downPct / 100));
+      const loan = price - downAmt;
+      const monthlyRate = 0.0425 / 12;
+      const n = years * 12;
+      const monthly = Math.round((loan * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -n)));
+
+      document.getElementById('mortPriceLabel').innerText = '$' + price.toLocaleString();
+      document.getElementById('mortDownPctLabel').innerText = downPct + '%';
+      document.getElementById('mortDownAmtLabel').innerText = '$' + downAmt.toLocaleString();
+      document.getElementById('mortYearsLabel').innerText = years + ' Years (4.25% APR)';
+      document.getElementById('mortMonthlyResult').innerHTML = '$' + monthly.toLocaleString() + '<span class="text-sm text-zinc-500 font-normal">/mo</span>';
+      document.getElementById('mortAnnualRent').innerText = '$' + Math.round(price * 0.085).toLocaleString() + ' / yr';
+      document.getElementById('mortProjectedVal').innerText = '$' + Math.round(price * 1.38).toLocaleString();
+    }
+
+    function renderFaqs() {
+      document.getElementById('faqContainer').innerHTML = faqs.map((item, i) => \`
+        <details class="group bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 cursor-pointer" \${i === 0 ? 'open' : ''}>
+          <summary class="font-semibold text-sm text-white flex items-center justify-between list-none">
+            <span>\${item.q}</span>
+            <span class="text-amber-400 group-open:rotate-45 transition-transform">+</span>
+          </summary>
+          <p class="text-xs text-zinc-400 mt-2.5 leading-relaxed">\${item.a}</p>
+        </details>
+      \`).join('');
+    }
+
+    function openViewingModal(propName) {
+      selectedResidenceForViewing = propName || 'Signature Portfolio';
+      document.getElementById('viewingPropertySubtitle').innerText = 'Residence: ' + selectedResidenceForViewing;
+      const m = document.getElementById('viewingModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+      renderLeads();
+    }
+
+    function closeViewingModal() {
+      const m = document.getElementById('viewingModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function submitViewingForm(e) {
+      e.preventDefault();
+      const name = document.getElementById('leadName').value.trim();
+      const email = document.getElementById('leadEmail').value.trim();
+      const tour = document.getElementById('leadTourType').value;
+      const leads = JSON.parse(localStorage.getItem('aura_website_leads') || '[]');
+      leads.unshift({ name, email, residence: selectedResidenceForViewing, tour, time: new Date().toLocaleTimeString() });
+      localStorage.setItem('aura_website_leads', JSON.stringify(leads));
+      e.target.reset();
+      renderLeads();
+      showToast('VIP viewing confirmed for ' + name + '!');
+    }
+
+    function renderLeads() {
+      const leads = JSON.parse(localStorage.getItem('aura_website_leads') || '[]');
+      const el = document.getElementById('leadsList');
+      if (leads.length === 0) {
+        el.innerHTML = 'No viewing appointments scheduled in this session yet.';
+      } else {
+        el.innerHTML = '<div class="font-semibold text-zinc-300 mb-1">Confirmed VIP Appointments:</div>' +
+          leads.slice(0, 3).map(l => \`<div>• \${l.name} — \${l.residence || 'Portfolio'} (\${l.time})</div>\`).join('');
+      }
+    }
+
+    function openAddPropertyModal() {
+      const m = document.getElementById('addPropertyModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeAddPropertyModal() {
+      const m = document.getElementById('addPropertyModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function saveNewProperty(e) {
+      e.preventDefault();
+      const title = document.getElementById('newPropTitle').value.trim();
+      const type = document.getElementById('newPropType').value;
+      const community = document.getElementById('newPropLocation').value.trim();
+      const price = Number(document.getElementById('newPropPrice').value) || 3500000;
+      const beds = Number(document.getElementById('newPropBeds').value) || 4;
+      const sqft = Number(document.getElementById('newPropSqft').value) || 4500;
+      residences.unshift({
+        id: 'RES-' + Math.floor(200 + Math.random() * 700),
+        title,
+        community,
+        type,
+        price,
+        beds,
+        baths: beds + 1,
+        sqft,
+        yieldPct: 9.0,
+        img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80',
+        badge: 'New Exclusive Release'
+      });
+      localStorage.setItem('aura_realestate_listings', JSON.stringify(residences));
+      closeAddPropertyModal();
+      e.target.reset();
+      renderProperties();
+      showToast('Published ' + title);
+    }
+
+    function exportPortfolioCsv() {
+      const headers = 'ID,Title,Community,Type,PriceUSD,Beds,SqFt,YieldPct\\n';
+      const rows = residences.map(r => \`\${r.id},"\${r.title}","\${r.community}",\${r.type},\${r.price},\${r.beds},\${r.sqft},\${r.yieldPct}%\`).join('\\n');
+      const blob = new Blob([headers + rows], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'luxury-residences-portfolio.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported property portfolio to CSV');
+    }
+
+    function toggleTheme() {
+      const root = document.documentElement;
+      if (root.getAttribute('data-theme') === 'light') root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', 'light');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      t.classList.remove('translate-y-24', 'opacity-0');
+      setTimeout(() => t.classList.add('translate-y-24', 'opacity-0'), 2800);
+    }
+
+    window.onload = () => {
+      renderProperties();
+      calculateMortgage();
+      renderFaqs();
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>`;
+}
+
 /**
  * Generates an Agency-Grade, High-Conversion Interactive Website & Product Showcase
  * with working navigation, interactive ROI pricing calculator, feature preview tabs,
  * filterable case studies, FAQ accordion, and working Lead Capture / Booking modal.
  */
 function buildInteractiveWebsiteHtml(title: string, prompt: string): string {
+  const combined = `${title} ${prompt}`.toLowerCase();
+  if (
+    combined.includes('real estate') ||
+    combined.includes('real estae') ||
+    combined.includes('propert') ||
+    combined.includes('emaar') ||
+    combined.includes('villa') ||
+    combined.includes('penthouse') ||
+    combined.includes('mansion') ||
+    combined.includes('apartment') ||
+    combined.includes('realty') ||
+    combined.includes('housing') ||
+    combined.includes('estate')
+  ) {
+    return buildRealEstateWebsiteHtml(title, prompt);
+  }
+
   return `<!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
@@ -1677,10 +2330,9 @@ function buildInteractiveWebsiteHtml(title: string, prompt: string): string {
       </div>
 
       <nav class="hidden md:flex items-center gap-7 text-xs font-medium text-zinc-400">
-        <a href="#platform" class="hover:text-amber-300 transition-colors">Platform</a>
-        <a href="#interactive-demo" class="hover:text-amber-300 transition-colors">Interactive Demo</a>
-        <a href="#roi-calculator" class="hover:text-amber-300 transition-colors">ROI & Pricing</a>
-        <a href="#faq" class="hover:text-amber-300 transition-colors">FAQ</a>
+        <button type="button" onclick="document.getElementById('platform')?.scrollIntoView({behavior:'smooth'})" class="hover:text-amber-300 transition-colors cursor-pointer">Platform</button>
+        <button type="button" onclick="document.getElementById('roi-calculator')?.scrollIntoView({behavior:'smooth'})" class="hover:text-amber-300 transition-colors cursor-pointer">ROI &amp; Pricing</button>
+        <button type="button" onclick="document.getElementById('faq')?.scrollIntoView({behavior:'smooth'})" class="hover:text-amber-300 transition-colors cursor-pointer">FAQ</button>
       </nav>
 
       <div class="flex items-center gap-2.5">
@@ -1713,14 +2365,14 @@ function buildInteractiveWebsiteHtml(title: string, prompt: string): string {
         Delivering institutional-grade speed, automated workflows, and real-time operational clarity. Built for modern teams that demand zero compromise.
       </p>
       <div class="flex flex-wrap items-center gap-3 pt-2">
-        <button onclick="openBookingModal()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20">
+        <button onclick="openBookingModal()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer">
           <span>Start Free Trial</span>
           <i data-lucide="sparkles" class="w-4 h-4"></i>
         </button>
-        <a href="#roi-calculator" class="px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-semibold text-xs flex items-center gap-2">
+        <button type="button" onclick="document.getElementById('roi-calculator')?.scrollIntoView({behavior:'smooth'})" class="px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-semibold text-xs flex items-center gap-2 cursor-pointer">
           <span>Calculate Your ROI</span>
           <i data-lucide="calculator" class="w-4 h-4 text-amber-400"></i>
-        </a>
+        </button>
       </div>
       <div class="grid grid-cols-3 gap-4 pt-6 border-t border-zinc-800/80">
         <div><div class="text-2xl font-extrabold text-white font-mono">99.99%</div><div class="text-xs text-zinc-400">Guaranteed SLA</div></div>

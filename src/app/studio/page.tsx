@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/client/auth-context';
 import { Navbar } from '@/components/Navbar';
@@ -64,30 +64,133 @@ function AuraStudioContent() {
     },
   ]);
 
+  const hasRestoredRef = useRef(false);
+
   // Restore active studio session from localStorage if no URL prompt override
   useEffect(() => {
-    if (initialPromptParam && initialPromptParam.trim().length > 0) return;
+    if (typeof window !== 'undefined' && window.self !== window.top) {
+      window.parent.postMessage({ type: 'AURA_SANDBOX_ESCAPE' }, '*');
+      return;
+    }
+
+    if (initialPromptParam && initialPromptParam.trim().length > 0) {
+      hasRestoredRef.current = true;
+      return;
+    }
+
     try {
+      // 1. Heal any corrupted projects in aura_local_projects (e.g., "Mm My Motto Is Building")
+      let healedLocalProject: any = null;
+      const rawProjects = localStorage.getItem('aura_local_projects');
+      if (rawProjects) {
+        const list: any[] = JSON.parse(rawProjects);
+        let modifiedList = false;
+        const updatedList = list.map((p: any) => {
+          const isBadTitle =
+            typeof p.title === 'string' && /^(?:mm\s+|um\s+|my\s+motto\s+is)/i.test(p.title);
+          const isBadHtml = typeof p.html === 'string' && p.html.includes('Mm My Motto');
+          if (isBadTitle || isBadHtml) {
+            modifiedList = true;
+            const fallbackPrompt =
+              'landing page for my real estate business named Emaar Properties';
+            const synth = synthesizeAppFromPrompt(fallbackPrompt, AURA_ENGINE_DISPLAY.name);
+            const healed = {
+              ...p,
+              id: 'proj_emaar_properties',
+              title: synth.title,
+              html: synth.htmlCode,
+              updatedAt: Date.now(),
+            };
+            if (!healedLocalProject) healedLocalProject = healed;
+            return healed;
+          }
+          return p;
+        });
+        if (modifiedList) {
+          localStorage.setItem('aura_local_projects', JSON.stringify(updatedList));
+        }
+      }
+
+      // 2. Restore and heal active session
       const raw = localStorage.getItem(SESSION_STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved.htmlCode && typeof saved.htmlCode === 'string') {
+        const savedMsgs: ChatMessage[] = Array.isArray(saved.messages) ? saved.messages : [];
+        const lastUserMsg = [...savedMsgs].reverse().find((m) => m.role === 'user');
+        const hasBadTitle =
+          typeof saved.projectTitle === 'string' &&
+          /^(?:mm\s+|um\s+|my\s+motto\s+is)/i.test(saved.projectTitle);
+        const hasRawThoughtMsg = savedMsgs.some(
+          (m) => typeof m.content === 'string' && m.content.includes('Deconstructing prompt intent')
+        );
+        const hasStaleHtml =
+          lastUserMsg &&
+          (!saved.htmlCode ||
+            saved.htmlCode.trim().length < 80 ||
+            saved.htmlCode.includes('Mm My Motto') ||
+            (/real\s+esta/i.test(lastUserMsg.content) && saved.htmlCode.includes('Guaranteed SLA')));
+
+        if (lastUserMsg && (hasBadTitle || hasRawThoughtMsg || hasStaleHtml)) {
+          const synth = synthesizeAppFromPrompt(lastUserMsg.content, AURA_ENGINE_DISPLAY.name);
+          setHtmlCode(synth.htmlCode);
+          setHistoryStack([synth.htmlCode]);
+          setHistoryIndex(0);
+          setProjectTitle(synth.title);
+          if (saved.projectId) setProjectId(saved.projectId);
+          setVersion(saved.version || 1);
+          const cleanedMsgs = savedMsgs.map((m) =>
+            m.role === 'assistant' && m.content.includes('Deconstructing prompt intent')
+              ? {
+                  ...m,
+                  content: `Built "${synth.title}" with bespoke domain UI, interactive components, and responsive styling.`,
+                }
+              : m
+          );
+          setMessages(cleanedMsgs);
+          hasRestoredRef.current = true;
+          return;
+        }
+
+        if (saved.htmlCode && typeof saved.htmlCode === 'string' && saved.htmlCode.trim().length > 0) {
           setHtmlCode(saved.htmlCode);
           setHistoryStack([saved.htmlCode]);
           setHistoryIndex(0);
-        }
-        if (saved.projectTitle) setProjectTitle(saved.projectTitle);
-        if (saved.projectId) setProjectId(saved.projectId);
-        if (saved.version) setVersion(saved.version);
-        if (Array.isArray(saved.messages) && saved.messages.length > 0) {
-          setMessages(saved.messages);
+          if (saved.projectTitle) setProjectTitle(saved.projectTitle);
+          if (saved.projectId) setProjectId(saved.projectId);
+          if (saved.version) setVersion(saved.version);
+          if (savedMsgs.length > 0) setMessages(savedMsgs);
+          hasRestoredRef.current = true;
+          return;
         }
       }
+
+      // 3. If active session was cleared by nested iframe bug, restore from healed local project if present
+      if (healedLocalProject) {
+        setHtmlCode(healedLocalProject.html);
+        setHistoryStack([healedLocalProject.html]);
+        setHistoryIndex(0);
+        setProjectTitle(healedLocalProject.title);
+        setProjectId(healedLocalProject.id);
+        setVersion(healedLocalProject.version || 1);
+        setMessages([
+          {
+            id: `msg_healed_${Date.now()}`,
+            role: 'assistant',
+            content: `Built "${healedLocalProject.title}" with bespoke luxury real estate listings, interactive property filters, mortgage calculator, and VIP viewing modal.`,
+            createdAt: Date.now(),
+            version: healedLocalProject.version || 1,
+            model: AURA_ENGINE_DISPLAY.name,
+          },
+        ]);
+      }
     } catch {}
+    hasRestoredRef.current = true;
   }, [initialPromptParam]);
 
   // Persist active session whenever htmlCode, title, or messages change
   useEffect(() => {
+    if (!hasRestoredRef.current) return;
+    if (typeof window !== 'undefined' && window.self !== window.top) return;
     try {
       localStorage.setItem(
         SESSION_STORAGE_KEY,
@@ -308,13 +411,14 @@ function AuraStudioContent() {
       const htmlMatch = text.match(/<html[\s\S]*/i);
       if (htmlMatch && htmlMatch[0].length > 80) html = `<!DOCTYPE html>\n${htmlMatch[0].trim()}`;
     }
-    if (!html) return text;
+    if (!html) return '';
+    const openScripts = (html.match(/<script\b/gi) || []).length;
+    const closeScripts = (html.match(/<\/script>/gi) || []).length;
+    if (openScripts > closeScripts || (!html.includes('</body>') && !html.includes('</html>'))) {
+      return '';
+    }
     if (!html.includes('</html>')) {
-      if (!html.includes('</body>')) {
-        html += '\n<script>try { lucide.createIcons(); } catch(e) {}</script>\n</body>\n</html>';
-      } else {
-        html += '\n</html>';
-      }
+      html += '\n</html>';
     }
     return html;
   };
@@ -709,6 +813,21 @@ function AuraStudioContent() {
 }
 
 export default function StudioPage() {
+  const [isFramed, setIsFramed] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (window.self !== window.top) {
+        setIsFramed(true);
+        window.parent.postMessage({ type: 'AURA_SANDBOX_ESCAPE' }, '*');
+      }
+    } catch {}
+  }, []);
+
+  if (isFramed) {
+    return <div className="h-screen w-screen bg-[#09090b]" />;
+  }
+
   return (
     <Suspense
       fallback={

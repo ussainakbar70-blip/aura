@@ -132,9 +132,35 @@ export function PreviewPanel({
     onCloseInspect?.();
   };
 
+  const [recoveryKey, setRecoveryKey] = useState(0);
+
+  const handleIframeLoad = useCallback(() => {
+    try {
+      const win = iframeRef.current?.contentWindow;
+      if (!win) return;
+      const loc = win.location;
+      if (
+        loc &&
+        loc.protocol !== 'about:' &&
+        loc.protocol !== 'blob:' &&
+        loc.protocol !== 'data:' &&
+        (loc.pathname.startsWith('/studio') || loc.pathname === '/')
+      ) {
+        setRecoveryKey((k) => k + 1);
+      }
+    } catch {
+      // Cross-origin navigation, ignore
+    }
+  }, []);
+
   useEffect(() => {
     const handleWindowMessage = (event: MessageEvent) => {
       if (!event.data) return;
+
+      if (event.data.type === 'AURA_SANDBOX_ESCAPE') {
+        setRecoveryKey((k) => k + 1);
+        return;
+      }
 
       if (event.data.type === 'AURA_SANDBOX_LOG') {
         const level: 'log' | 'info' | 'warn' | 'error' = event.data.level || 'info';
@@ -234,7 +260,7 @@ export function PreviewPanel({
               } else if (d.accentHue === 0) {
                 rules.push('body { filter: none !important; }');
               }
-              s.innerHTML = rules.join('\n');
+              s.innerHTML = rules.join('\\n');
             }
           });
 
@@ -256,20 +282,78 @@ export function PreviewPanel({
           }, true);
 
           document.addEventListener('click', function(e) {
-            if (!inspectEnabled) return;
-            e.preventDefault();
-            e.stopPropagation();
-            if (selectedEl) selectedEl.style.outline = '';
-            selectedEl = e.target;
-            selectedEl.style.outline = '2px solid #10b981';
-            selectedEl.style.outlineOffset = '2px';
-            window.parent.postMessage({
-              type: 'AURA_ELEMENT_SELECTED',
-              tagName: selectedEl.tagName,
-              text: selectedEl.innerText || '',
-              classes: selectedEl.className || ''
-            }, '*');
+            if (inspectEnabled) {
+              e.preventDefault();
+              e.stopPropagation();
+              if (selectedEl) selectedEl.style.outline = '';
+              selectedEl = e.target;
+              selectedEl.style.outline = '2px solid #10b981';
+              selectedEl.style.outlineOffset = '2px';
+              window.parent.postMessage({
+                type: 'AURA_ELEMENT_SELECTED',
+                tagName: selectedEl.tagName,
+                text: selectedEl.innerText || '',
+                classes: selectedEl.className || ''
+              }, '*');
+              return;
+            }
+
+            // Prevent srcdoc links from resolving against parent /studio URL and nesting Aura Studio
+            const link = e.target && e.target.closest ? e.target.closest('a') : null;
+            if (link) {
+              const rawHref = (link.getAttribute('href') || '').trim();
+              if (link.hasAttribute('download') || rawHref.startsWith('blob:') || rawHref.startsWith('data:') || rawHref.startsWith('mailto:') || rawHref.startsWith('tel:') || rawHref.startsWith('javascript:')) {
+                return;
+              }
+              e.preventDefault();
+              if (rawHref.startsWith('#')) {
+                if (rawHref.length > 1) {
+                  const targetId = decodeURIComponent(rawHref.slice(1));
+                  const targetEl = document.getElementById(targetId) || document.querySelector(rawHref);
+                  if (targetEl && targetEl.scrollIntoView) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                } else {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+                return;
+              }
+              if (rawHref.startsWith('http://') || rawHref.startsWith('https://')) {
+                try {
+                  const targetUrl = new URL(rawHref);
+                  if (window.parent && window.parent.location && targetUrl.origin === window.parent.location.origin) {
+                    return;
+                  }
+                } catch(err) {}
+                window.open(rawHref, '_blank', 'noopener,noreferrer');
+                return;
+              }
+              // Relative path like /contact or /properties -> try scrolling to matching section
+              const slug = rawHref.replace(/^[\\/#]+/, '').replace(/\\.html?$/i, '').toLowerCase();
+              if (slug) {
+                const matchEl = document.getElementById(slug) || document.querySelector('[id*="' + slug + '"]');
+                if (matchEl && matchEl.scrollIntoView) {
+                  matchEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  return;
+                }
+              }
+              if (typeof window.showToast === 'function') {
+                window.showToast('Navigated to ' + (link.innerText.trim() || slug || 'section'));
+              }
+            }
           }, true);
+
+          // Prevent un-intercepted <form> submissions from navigating srcdoc to parent /studio
+          document.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = e.target;
+            if (form && !form.getAttribute('onsubmit')) {
+              if (typeof window.showToast === 'function') {
+                window.showToast('Submitted successfully!');
+              }
+              try { form.reset(); } catch(err) {}
+            }
+          });
 
           if (window.MutationObserver) {
             const observer = new MutationObserver(function() {
@@ -455,9 +539,10 @@ export function PreviewPanel({
         ) : (
           <div style={containerStyle} className={`transition-all duration-300 flex items-center justify-center ${frameClasses}`}>
             <iframe
-              key={iframeKey}
+              key={`${iframeKey}_${recoveryKey}`}
               ref={iframeRef}
               srcDoc={sandboxedHtml}
+              onLoad={handleIframeLoad}
               title={title}
               sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"
               className="w-full h-full bg-[#09090b] border-0"

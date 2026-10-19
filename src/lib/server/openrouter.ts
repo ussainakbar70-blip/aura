@@ -59,6 +59,8 @@ CRITICAL RULE #1: 100% BESPOKE, BRAND-ACCURATE & DOMAIN-SPECIFIC DESIGN
 
 3. TRUE INTERACTIVITY & ZERO DEAD BUTTONS:
    - Every single button, navigation link, filter pill, search box, calculator slider, and modal MUST work via clean vanilla JavaScript inside <script> before </body>.
+   - For section navigation, use <button type="button" onclick="document.getElementById('section-id')?.scrollIntoView({behavior:'smooth'})"> instead of <a href="..."> so navigation never reloads the preview frame.
+   - Every <form> MUST use onsubmit="event.preventDefault(); ...".
    - Include a floating toast notification function showToast(message) for user feedback on every action.
    - Persist user-created items/bookings/cart in localStorage.
 
@@ -68,7 +70,7 @@ CRITICAL RULE #1: 100% BESPOKE, BRAND-ACCURATE & DOMAIN-SPECIFIC DESIGN
      * <script src="https://cdn.tailwindcss.com"></script>
      * <script src="https://unpkg.com/lucide@latest"></script>
    - Call lucide.createIcons(); on load and after any DOM update.
-   - Write clean, well-structured, complete code (~350-500 lines) and ALWAYS close </script>, </body>, and </html>.`;
+   - Write clean, well-structured, complete code (~320-450 lines) and ALWAYS close </script>, </body>, and </html>.`;
 
   if (existingHtml && existingHtml.trim().length > 100) {
     return `${base}
@@ -114,10 +116,10 @@ export function sanitizeStreamingText(text: string): string {
 }
 
 const RESILIENT_MODEL_CASCADE = [
-  'liquid/lfm-2.5-2.6b:free',
-  'cohere/north-mini-code:free',
   'nvidia/nemotron-3-ultra-550b-a55b:free',
   'poolside/laguna-s-2.1:free',
+  'cohere/north-mini-code:free',
+  'liquid/lfm-2.5-2.6b:free',
   'openrouter/free',
 ];
 
@@ -188,7 +190,7 @@ export async function streamOpenRouter(
     const candidateId = candidateModels[i];
     try {
       const abortCtrl = new AbortController();
-      const fetchTimer = setTimeout(() => abortCtrl.abort(), 20000);
+      const fetchTimer = setTimeout(() => abortCtrl.abort(), 12000);
 
       const res = await fetch(OPENROUTER_ENDPOINT, {
         method: 'POST',
@@ -207,6 +209,7 @@ export async function streamOpenRouter(
           stream: true,
           max_tokens: 8192,
           temperature: 0.5,
+          reasoning: { effort: 'low' },
         }),
         signal: abortCtrl.signal,
       });
@@ -383,15 +386,17 @@ export function extractHtml(text: string): string {
 </html>`;
   }
 
-  if (!html) return text;
+  if (!html) return '';
 
-  // Auto-close missing tags if stream was truncated
+  // Reject HTML that was truncated mid-<script> or before closing </body>
+  const openScripts = (html.match(/<script\b/gi) || []).length;
+  const closeScripts = (html.match(/<\/script>/gi) || []).length;
+  if (openScripts > closeScripts || (!html.includes('</body>') && !html.includes('</html>'))) {
+    return '';
+  }
+
   if (!html.includes('</html>')) {
-    if (!html.includes('</body>')) {
-      html += '\n<script>try { lucide.createIcons(); } catch(e) {}</script>\n</body>\n</html>';
-    } else {
-      html += '\n</html>';
-    }
+    html += '\n</html>';
   }
 
   return html;

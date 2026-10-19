@@ -26,8 +26,8 @@ export const AURA_ENGINE_DISPLAY = {
  * Foundational Engine: Nemotron 3 Ultra (550B MoE, 55B active, hybrid Transformer-Mamba).
  * Completely stealth routing with zero identity disclosure to client or user.
  */
-export const PRIMARY_AUTONOMOUS_MODEL_ID = 'liquid/lfm-2.5-2.6b:free';
-export const FALLBACK_AUTONOMOUS_MODEL_ID = 'cohere/north-mini-code:free';
+export const PRIMARY_AUTONOMOUS_MODEL_ID = 'nvidia/nemotron-3-ultra-550b-a55b:free';
+export const FALLBACK_AUTONOMOUS_MODEL_ID = 'poolside/laguna-s-2.1:free';
 
 /**
  * Internal routing pool.
